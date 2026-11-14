@@ -1,95 +1,78 @@
-# Roadmap — onde estamos (v0.11, nov/2026)
+# Roadmap — onde estamos (v0.14, nov/2026)
 
 | Fase | Objetivo | Status |
 |---|---|---|
 | 0 | Motor de regras separado da interface | ✅ Concluída |
-| 1 | MVP em HTML | ✅ Concluída (e ampliada) |
+| 1 | App em HTML | ✅ Concluída |
+| 1b | Revisão para escalar (código, dados, regras dos EUA) | ✅ Concluída |
 | 2 | Celular + sincronização | 🟡 Parcial |
 | 3 | Integração com o jogo (telemetria) | ⬜ Não iniciada |
 | 4 | Overlay sobre o jogo | ⬜ Não iniciada |
-| 5 | Carreira avançada | 🟡 Boa parte antecipada |
+| 5 | Carreira avançada | 🟡 Boa parte entregue |
 
-## Fase 0 — Motor de regras ✅
-- `src/engine.js`: funções puras, sem interface (DRE, viagem, carro, impostos, jornada, presets).
-- Reaproveitável no app, no companion de telemetria e no overlay.
-- 10 testes automáticos (`npm test`).
+## Etapas concluídas
+### Fase 0 — Motor de regras
+- `src/engine.js`: funções puras para resultado da semana, viagem, carro, impostos, jornada e predefinições.
 
-## Fase 1 — MVP em HTML ✅
-**Entregue:**
-- Painel com DRE resumido.
-- Diário de bordo.
-- Fechamento de semana com pay lag.
-- Holerite do bruto ao líquido.
-- Histórico.
-- Exportar e importar em JSON.
+### Fase 1 — App
+- Painel, Diário, Holerite, Histórico, Carreira (motorista, contrato, empresas) e Ajustes.
+- Regras gravadas por viagem; contratos com histórico; pay lag; contas fixas pelo calendário; empréstimo com juros.
+- Carro emprestado e próprio; infrações de jornada com fiscalização; ajuda em todos os campos e guia das regras.
+- Importação e exportação em planilha (.xlsx) e backup em JSON.
 
-**Além do previsto:**
-- Carreira com empresas, contratos e histórico.
-- Regras gravadas por viagem.
-- Camada de realismo EUA 2026 (impostos, quem paga, frete de mercado).
-- Carro emprestado e próprio.
-- Contas fixas pelo calendário.
-- Empréstimo com juros.
-- Ajuda em todos os campos.
+### Fase 1b — Revisão para escalar (esta versão)
+- **Código**:
+  - App dividido em 13 módulos (`src/app/`), com build por concatenação e sem dependências.
+  - 23 testes automáticos: 14 do motor e 9 do estado (carreira, contas, empréstimo, compactação, infrações, planilha).
+  - Código morto e migrações antigas removidos.
+- **Dados**:
+  - Esquema versionado (v3) e documentado em `esquema-de-dados.md`.
+  - Compactação do extrato e dos holerites com mais de 12 semanas, para respeitar o limite de 256 KiB por documento.
+  - Erros de sincronização agora aparecem na tela e a gravação é tentada de novo.
+- **Regras dos EUA**:
+  - Autônomo (1099): self-employment tax sobre o lucro do negócio, sem abater plano de saúde e 401(k); dedução QBI de 20%; holerite chamado de acerto (settlement) e imposto tratado como reserva do estimado trimestral.
+  - Jornada: restart de 34h (um dia inteiro de folga zera o ciclo).
+  - Tipos de operação no padrão do mercado: Local, Regional, Dedicated e OTR.
+- **Interface**:
+  - Assistente de nova carreira no primeiro acesso.
+  - Cabeçalho compacto no celular; navegação no topo no PC.
+  - Botão de nova viagem menor no celular; avisos não cobrem mais o cabeçalho.
+  - Formulário de viagem em duas colunas no celular; valores longos não são mais cortados.
+  - Holerite e Histórico sem números repetidos do cabeçalho.
 
-## Fase 2 — Celular + sincronização 🟡
-**Feito:**
-- Interface pensada para celular.
-- Sincronização entre PC e celular pela conta claude.ai, quando aberto como artifact.
-- Cópia local de reserva.
-- JSON para backup.
+### Fase 2 — parte já feita
+- Interface para celular e PC.
+- Sincronização pela conta claude.ai quando aberto como artifact; cópia local; backup em JSON.
 
-**Falta:**
-- **App instalável (PWA)**: manifesto e service worker, hospedado fora do Claude (ex.: GitHub Pages), funcionando offline e com ícone na tela inicial.
-- **Backend próprio de sincronização** (ex.: Supabase com login): a sincronização atual só existe dentro do claude.ai. O companion de telemetria e o overlay (fases 3 e 4) precisam gravar dados de fora, então essa é a decisão que destrava o resto.
-- **Migração**: exportar JSON do artifact e importar na versão hospedada.
+### Fase 5 — parte já feita
+- 5 classificações com predefinições; fixo, hora, CPM e percentual; jornada FMCSA; empréstimo; renome; bônus de segurança; experiência e CPM sugerido; status migratório; custos de owner-operator.
 
-## Fase 3 — Telemetria do ATS ⬜
-**Pré-requisitos prontos:**
-- O modelo de viagem já tem os campos que a telemetria entrega: origem, destino, distância, frete, dano, multa, pedágio, combustível e horas.
-- O motor é independente da interface.
+## Etapas que faltam
+### Fase 2 — restante
+- **App instalável (PWA)**: manifesto e service worker, hospedado fora do Claude (GitHub Pages), com ícone na tela inicial e uso offline.
+- **Sincronização própria com login** (ex.: Supabase): a atual só existe dentro do claude.ai, e o leitor de telemetria e o overlay precisam gravar de fora.
+- **Migração**: exportar o JSON do artifact e importar na versão hospedada.
 
-**Falta:**
-- Plugin do SDK de telemetria da SCS (DLL em `bin/win_x64/plugins`), usando um plugin da comunidade que expõe os dados por memória compartilhada.
-- App companheiro no PC (Tauri ou Electron) que lê os eventos de entrega, multa, pedágio, abastecimento e o relógio do jogo.
-- Criação de rascunhos de viagem para o jogador confirmar.
-- Envio dos dados para o backend da fase 2.
-- Mapeamento do relógio do jogo para o "dia do jogo" do app.
+### Fase 3 — Telemetria do ATS
+- Plugin do SDK de telemetria da SCS e app companheiro no PC (Tauri ou Electron).
+- Cada entrega vira um rascunho de viagem para confirmar (distância, frete, dano, multa, pedágio, combustível, horas).
+- Com horários reais, entram as regras que hoje dependem de aproximação: 10h de folga entre turnos e restart de 34h exato.
 
-## Fase 4 — Overlay ⬜
-- Janela transparente sempre por cima, aberta por atalho de teclado, reaproveitando o mesmo HTML.
-- Requer o jogo em "janela sem borda". Tela cheia exclusiva exige injeção no DirectX e fica para o fim.
-- Depende da fase 3 (companion) para receber dados ao vivo.
+### Fase 4 — Overlay
+- Janela transparente sempre por cima, por atalho de teclado, com o jogo em "janela sem borda".
 
-## Fase 5 — Carreira avançada 🟡
-**Já feito:**
-- 5 classificações, de W-2 a frota, com presets.
-- Formas de pagamento: fixo, hora, CPM e percentual.
-- Jornada FMCSA com alertas.
-- Empréstimos.
-- Renome.
-- Bônus de segurança.
-- Experiência e CPM sugerido.
-- Status migratório e CDL.
-- Custos de owner-operator.
+### Fase 5 — restante
+- Folga em casa (home time) para OTR.
+- Progressão automática: reajuste do CPM por tempo de casa e promoção sugerida.
+- Caminhão próprio como bem: compra, financiamento, revenda e manutenção programada.
+- Documentos do motorista: exame médico do DOT, proficiência em inglês e endossos da CDL (Hazmat, Tanker, Doubles/Triples).
+- Eventos aleatórios (inspeção, quebra) e gráficos de evolução.
 
-**Falta:**
-- **Home time**: folga em casa proporcional às semanas na estrada (OTR), com bloqueio de viagens nos dias de folga.
-- **Restart de 34h e 10h de folga** entre turnos (exige horário de início e fim por viagem, que a telemetria resolve).
-- **Progressão automática**: reajuste do CPM por milhas ou tempo de casa, e promoção sugerida (ex.: Company → Lease).
-- **Caminhão próprio como bem**: compra, financiamento, valor de revenda e manutenção programada.
-- **Eventos aleatórios**: inspeção DOT, quebra, multa de balança, bônus de cliente.
-- **Metas e relatórios**: gráficos de lucro por semana, $/mi e comparação entre empresas.
+## Próxima etapa de implementação
+**Fase 2b: app instalável e sincronização própria.**
+1. Subir o repositório no GitHub e publicar `dist/` no GitHub Pages (os testes já rodam a cada envio).
+2. Transformar em PWA: manifesto, ícones e service worker para uso offline.
+3. Criar a camada de sincronização com login, usando o esquema v3, e trocar `src/app/10-storage.js` por um adaptador com dois modos (conta Claude ou serviço próprio).
+4. Importar o JSON exportado da versão atual.
 
-## Dívida técnica
-- **Arquivos grandes**: o app está em um arquivo só (`src/app.js`, cerca de 1.300 linhas). Antes da fase 3, vale separar em módulos (estado, telas, formulários) com um bundler leve, como Vite.
-- **Testes**: só cobrem o motor. Faltam testes de migração de dados e de fechamento de semana.
-- **Esquema de dados**: não está documentado. Antes do backend, definir o formato (`state`, `history`, versões e migrações).
-
-## Próximas etapas sugeridas (em ordem)
-1. **Repositório**: subir no GitHub, publicar `dist/` no GitHub Pages e configurar CI rodando `npm test`.
-2. **Fase 2b**: PWA + backend de sincronização com login + importação do JSON atual.
-3. **Refatoração leve**: módulos + Vite + documento do esquema de dados.
-4. **Fase 3**: companion de telemetria gerando rascunhos de viagem.
-5. **Fase 4**: overlay no companion.
-6. **Fase 5 restante**: home time, progressão, caminhão próprio e eventos.
+Essa etapa vem antes da telemetria porque o app companheiro precisa de um lugar para gravar as viagens fora do Claude.

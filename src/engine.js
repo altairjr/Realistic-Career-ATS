@@ -10,6 +10,16 @@ const Engine = (() => {
   const r2 = v => Math.round((n(v) + Number.EPSILON) * 100) / 100;
   const sum = (arr, f) => arr.reduce((a, t) => a + (typeof f === 'function' ? f(t) : n(t[f])), 0);
   const clone = o => JSON.parse(JSON.stringify(o));
+  // As cinco classificações de vínculo (fixas: as predefinições dependem delas)
+  const CLASSIFICATIONS = [
+    'Nível 1: Company Driver (Empregado W-2)',
+    'Nível 2: Lease Operator (Arrendatário)',
+    'Nível 3: Owner-Operator (1099)',
+    'Nível 4: Owner-Operator com Autoridade Própria (MC/DOT)',
+    'Nível 5: Dono de Frota (Fleet Owner)'
+  ];
+  // Tipos de operação usados no mercado americano
+  const OPERATIONS = ['Local (Day Cab)', 'Regional', 'Dedicated (cliente fixo)', 'OTR / Long Haul (Sleeper Cab)'];
 
   // Imposto de renda federal 2026 (IRS / Tax Foundation)
   const TAX2026 = {
@@ -33,9 +43,8 @@ const Engine = (() => {
       // Quem paga cada despesa da viagem de caminhão: 'driver' | 'company'
       expenses: { fuel: 'company', tolls: 'company', hotel: 'company', fines: 'driver', damage: 'deductible', deductible: 1000 },
       // Converte o frete inflado do jogo em frete de mercado antes da comissão
-      market: { on: true, mode: 'factor', factor: 0.10, rpm: 2.5, applyCar: false },
+      market: { on: true, mode: 'factor', factor: 0.10, rpm: 2.5 },
       contract: {
-        v: 2,
         mode: 'weekly',
         hours: 50,
         tripBonus: true,
@@ -46,11 +55,11 @@ const Engine = (() => {
         minimum: { on: false, value: 1100 },
         extras:  { layoverOn: true, layoverRate: 150, breakdownOn: true, breakdownRate: 20, tarpOn: false, tarpRate: 75 }
       },
-      taxes: { on: true, type: 'w2', filing: 'single', federal: 'table', flatPct: 12, ficaPct: 7.65, sePct: 15.3, statePct: 0 },
+      taxes: { on: true, type: 'w2', filing: 'single', federal: 'table', flatPct: 12, ficaPct: 7.65, sePct: 15.3, statePct: 0, qbi: true },
       benefits: { healthOn: true, health: 45, k401On: false, k401Pct: 4 },
       perDiem: { on: false, rate: 80 },
       opCosts: { on: false, maintenance: 0.404, tires: 0.05, insurance: 0.10, truckWeekly: 650, otherWeekly: 50 },
-      hos: { on: true, cycle: '70/8', shortHaul: true, radius: 150, penalties: true, resetSafety: true, inspectChance: 25, fine: 1000 },
+      hos: { on: true, cycle: '70/8', shortHaul: true, radius: 150, restart: true, penalties: true, resetSafety: true, inspectChance: 25, fine: 1000 },
       safety: { on: true, weeks: 13, amount: 300 },
       renome: { on: false, pct: 0 },
       borrowed: {
@@ -62,41 +71,15 @@ const Engine = (() => {
         ownOn: true,           // permitir carro próprio
         costPerMile: 0.50      // próprio: manutenção, pneus, seguro e depreciação por milha
       },
-      payroll: { lagOn: true, lagWeeks: 1, paydayWeekday: 4, autoPay: true, deposit: 'takehome' }, // takehome = líquido do contracheque | net = lucro (planilha)
+      payroll: { lagOn: true, lagWeeks: 1, paydayWeekday: 4, autoPay: true },
       loan: { on: false, installment: 0, freq: 'monthly', rate: 0 },   // parcela semanal ou mensal (30 dias), juros ao mês
       bills: { on: true, weekday: 0 },                                  // contas fixas cobradas pelo calendário, mesmo sem salário
       cities: ['Reno', 'Truckee', 'Carson City', 'Tonopah'],
-      lists: {
-        classification: [
-          'Nível 1: Company Driver (Empregado W-2)',
-          'Nível 2: Lease Operator (Arrendatário)',
-          'Nível 3: Owner-Operator (1099)',
-          'Nível 4: Owner-Operator com Autoridade Própria (MC/DOT)',
-          'Nível 5: Dono de Frota (Fleet Owner)'
-        ],                                                   // fixa: as predefinições dependem dela
-        operation: [
-          'Local/Dedicated',
-          'Local / Regional (Day Cab)',
-          'OTR / Longa Distância (Sleeper Cab)'
-        ]
-      }
+      lists: { operation: OPERATIONS.slice() }
     };
   }
 
-  function migrate(saved) {
-    const c = saved && saved.contract;
-    if (!c || c.v >= 2) return saved;
-    const on = c.commissionOn !== false, pct = c.commission ?? 5;
-    return { ...saved, contract: {
-      v: 2, mode: c.mode === 'none' ? 'percent' : (c.mode || 'weekly'), hours: c.hours ?? 50, tripBonus: c.tripBonus !== false,
-      weekly: { value: c.weekly ?? 1300, commissionOn: on, commission: pct },
-      hourly: { rate: c.hourly ?? 26, commissionOn: on, commission: pct },
-      cpm: { rate: c.cpm ?? 0.55 },
-      percent: { commission: c.mode === 'none' ? pct : 25 }
-    } };
-  }
   function mergeDefaults(saved) {
-    saved = migrate(saved);
     const walk = (base, over) => {
       if (!over || typeof over !== 'object' || Array.isArray(over)) return over === undefined ? base : over;
       const out = Array.isArray(base) ? [] : { ...base };
@@ -124,26 +107,21 @@ const Engine = (() => {
     if (c.includes('owner') || c.includes('1099')) return 'owner';
     return 'w2';
   }
-  // Muda só as regras ligadas ao vínculo; valores de refeição, moradia, cidades etc. ficam.
+  // Aplica as condições típicas do vínculo a um conjunto de condições de contrato
+  // (contract, expenses, benefits, perDiem, opCosts, safety). O tipo fiscal sai da classificação.
   function applyPreset(s, key, { otr = false } = {}) {
     const all = v => ({ fuel: v, tolls: v, hotel: v, fines: 'driver', damage: v === 'driver' ? 'driver' : 'deductible', deductible: s.expenses.deductible || 1000 });
-    s.market.on = true; s.taxes.on = true; s.safety.on = key !== 'authority' && key !== 'fleet'; s.payroll.deposit = 'takehome';
-    if (key === 'w2') {
-      s.expenses = all('company'); s.expenses.fines = 'driver'; s.expenses.damage = 'deductible';
-      s.taxes.type = 'w2'; s.benefits.healthOn = true; s.opCosts.on = false;
-      s.perDiem.on = !!otr;
-      return s;
-    }
+    s.safety.on = key !== 'authority' && key !== 'fleet';
+    s.benefits.healthOn = true;
+    s.perDiem.on = !!otr;
+    if (key === 'w2') { s.expenses = all('company'); s.opCosts.on = false; return s; }
     // Lease / owner-operator / autoridade / frota: paga tudo, recebe % do frete
-    s.expenses = all('driver');
-    s.taxes.type = '1099'; s.benefits.healthOn = true; s.perDiem.on = !!otr; s.opCosts.on = true;
-    s.contract.mode = 'percent';
-    if (key === 'lease')     { s.contract.percent.commission = 70;  s.opCosts.truckWeekly = 650; s.opCosts.insurance = 0.08; s.opCosts.otherWeekly = 60; }
-    if (key === 'owner')     { s.contract.percent.commission = 75;  s.opCosts.truckWeekly = 600; s.opCosts.insurance = 0.10; s.opCosts.otherWeekly = 80; }
-    if (key === 'authority') { s.contract.percent.commission = 100; s.opCosts.truckWeekly = 600; s.opCosts.insurance = 0.16; s.opCosts.otherWeekly = 180; }
-    if (key === 'fleet')     { s.contract.percent.commission = 100; s.opCosts.truckWeekly = 600; s.opCosts.insurance = 0.16; s.opCosts.otherWeekly = 250; }
+    s.expenses = all('driver'); s.opCosts.on = true; s.contract.mode = 'percent';
+    const P = { lease: [70, 650, 0.08, 60], owner: [75, 600, 0.10, 80], authority: [100, 600, 0.16, 180], fleet: [100, 600, 0.16, 250] }[key];
+    if (P) { s.contract.percent.commission = P[0]; s.opCosts.truckWeekly = P[1]; s.opCosts.insurance = P[2]; s.opCosts.otherWeekly = P[3]; }
     return s;
   }
+  const taxTypeFor = classification => presetKeyFor(classification) === 'w2' ? 'w2' : '1099';
 
   /* ---------- Calendário ---------- */
   const weekdayIdx = (day, s) => (((day - 1 + n(s.day1Weekday)) % 7) + 7) % 7;
@@ -158,7 +136,7 @@ const Engine = (() => {
     if (!_cache.has(t.contract)) _cache.set(t.contract, mergeDefaults({ contract: t.contract }).contract);
     return _cache.get(t.contract);
   }
-  // Regra do carro gravada na viagem. Sem 'mode' = fórmula antiga da planilha (% do frete − todas as despesas).
+  // Regra do carro gravada na viagem; sem regra gravada, usa a atual (emprestado)
   const carRuleOf = (t, s) => (t && t.car && t.car.mode) ? t.car : carSnapshot(s, 'borrowed');
   function carSnapshot(s, mode = 'borrowed') {
     const b = s.borrowed;
@@ -238,11 +216,13 @@ const Engine = (() => {
     p.total = r2(p.base + p.detention + p.stops + p.layover + p.breakdown + p.tarp + p.commission + p.bonus);
     return p;
   }
-  const tripCommission = (t, s) => tripPay(t, s).total;
 
-  function annualTax(income, filing) {
+  // income: renda anual antes da dedução padrão. qbi: renda qualificada do negócio (1099);
+  // a dedução é 20% do menor entre a QBI e a renda tributável (Section 199A, permanente desde 2025).
+  function annualTax(income, filing, { qbi = 0 } = {}) {
     const T = TAX2026[filing] || TAX2026.single;
-    const taxable = Math.max(0, income - T.std);
+    let taxable = Math.max(0, income - T.std);
+    if (qbi > 0) taxable -= 0.2 * Math.min(qbi, taxable);
     let tax = 0, prev = 0;
     for (const [cap, rate] of T.br) { if (taxable <= prev) break; tax += (Math.min(taxable, cap) - prev) * rate; prev = cap; }
     return tax;
@@ -328,18 +308,21 @@ const Engine = (() => {
     const ded = { federal: 0, fica: 0, se: 0, state: 0, health: 0, k401: 0 };
     ded.health = B.healthOn ? n(B.health) : 0;
     ded.k401 = B.k401On ? revenue * n(B.k401Pct) / 100 : 0;
-    let taxable = 0;
+    let taxable = 0, qbi = 0;
     if (T.on && revenue > 0) {
       if (T.type === '1099') {
+        // Autônomo (Schedule C): o self-employment tax incide sobre o lucro do negócio.
+        // Plano de saúde e aposentadoria reduzem só o imposto de renda, não o SE tax.
         const business = v.fuel + v.tolls + v.damage + op.total;
-        const netSE = Math.max(0, revenue - business - perDiem * 0.8 - ded.health - ded.k401);
+        const netSE = Math.max(0, revenue - business - perDiem * 0.8);
         ded.se = netSE * 0.9235 * n(T.sePct) / 100;
-        taxable = Math.max(0, netSE - ded.se / 2);
+        taxable = Math.max(0, netSE - ded.se / 2 - ded.health - ded.k401);
+        qbi = T.qbi !== false ? taxable * 52 : 0;
       } else {
         ded.fica = Math.max(0, revenue - perDiem - ded.health) * n(T.ficaPct) / 100;
         taxable = Math.max(0, revenue - perDiem - ded.health - ded.k401);
       }
-      ded.federal = T.federal === 'flat' ? taxable * n(T.flatPct) / 100 : annualTax(taxable * 52, T.filing) / 52;
+      ded.federal = T.federal === 'flat' ? taxable * n(T.flatPct) / 100 : annualTax(taxable * 52, T.filing, { qbi }) / 52;
       ded.state = taxable * n(T.statePct) / 100;
     }
     for (const key in ded) ded[key] = r2(ded[key]);
@@ -387,15 +370,20 @@ const Engine = (() => {
       return { day, ...d, drive: r2(d.drive), duty: r2(d.duty), exempt, alerts };
     });
     const [limit, window] = H.cycle === '60/7' ? [60, 7] : [70, 8];
-    let cycleUsed = 0;
-    for (let d = gameDay - window + 1; d <= gameDay; d++) if (byDay[d]) cycleUsed += byDay[d].duty;
+    // Soma do ciclo: volta dia a dia até o limite da janela. Um dia inteiro sem viagem de caminhão
+    // equivale ao restart de 34 horas de folga e zera a contagem (regra opcional da FMCSA).
+    let cycleUsed = 0, restartDay = null;
+    for (let d = gameDay; d > gameDay - window && d >= 1; d--) {
+      if (byDay[d]) cycleUsed += byDay[d].duty;
+      else if (H.restart !== false && d < gameDay) { restartDay = d; break; }
+    }
     cycleUsed = r2(cycleUsed);
-    return { rows, limit, window, cycleUsed, cycleLeft: r2(Math.max(0, limit - cycleUsed)), over: cycleUsed > limit };
+    return { rows, limit, window, cycleUsed, cycleLeft: r2(Math.max(0, limit - cycleUsed)), over: cycleUsed > limit, restartDay };
   }
 
-  return { WEEKDAYS, WEEKDAYS_FULL, STATUSES, PRESETS, TAX2026, n, r2, defaults, mergeDefaults, migrate,
-    presetKeyFor, applyPreset, weekdayIdx, weekStartOf, dayLabel, paydayFor,
+  return { WEEKDAYS, WEEKDAYS_FULL, STATUSES, CLASSIFICATIONS, OPERATIONS, PRESETS, TAX2026, n, r2, defaults, mergeDefaults,
+    presetKeyFor, taxTypeFor, applyPreset, weekdayIdx, weekStartOf, dayLabel, paydayFor,
     contractOf, carRuleOf, carSnapshot, carBreakdown, snapshotFor, rulesSnapshot, marketFreight, tripCosts, borrowedValue,
-    commissionRule, tripPay, tripCommission, annualTax, dre, hos };
+    commissionRule, tripPay, annualTax, dre, hos };
 })();
 if (typeof module !== 'undefined') module.exports = Engine;

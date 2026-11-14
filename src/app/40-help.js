@@ -1,0 +1,240 @@
+/* ---------- Ajuda de cada campo e mensagem ----------
+   Cada entrada: o que é · para que serve · como preencher. Aberta pelo botão "?" ao lado do nome. */
+const Hx = (o, p, c) => `<p><b>O que é:</b> ${o}</p>${p ? `<p><b>Para que serve:</b> ${p}</p>` : ''}${c ? `<p><b>Como preencher:</b> ${c}</p>` : ''}`;
+const HELP = {
+  /* --- Início e contas fixas --- */
+  'bank.opening': Hx('O dinheiro que o motorista tinha na conta no começo da carreira, antes de qualquer viagem, holerite ou conta.', 'É a base do saldo bancário. O saldo atual = saldo inicial + tudo que entrou e saiu no Extrato.', 'Digite o valor em dólares, sem o símbolo. Ex.: 3000. Para corrigir o saldo depois de começar, prefira "Ajustar saldo" no Holerite, que deixa o motivo registrado.'),
+  'career.startDay': Hx('O dia do jogo em que a carreira começou.', 'Contas fixas e parcelas de empréstimo só são cobradas a partir deste dia.', 'Use o dia do calendário do jogo (o número que aparece no topo). Na maioria dos casos é 1.'),
+  'settings.bills.on': Hx('Cobrança automática das contas fixas pelo calendário do jogo.', 'Na vida real o aluguel vence mesmo que o salário ainda não tenha caído. Ligado, a moradia (e, para lease/owner, a parcela do caminhão e licenças) sai do saldo toda semana no dia escolhido, com ou sem viagens. O fechamento da semana não cobra de novo.', 'Deixe ligado para um jogo mais realista. Desligado, essas contas só saem do saldo quando você fecha a semana.'),
+  'settings.bills.weekday': Hx('O dia da semana em que as contas fixas vencem.', 'Define quando o dinheiro sai do saldo.', 'Escolha o dia. Segunda é o padrão: as contas da semana são pagas no começo dela.'),
+  'settings.loan.on': Hx('Indica que o motorista tem uma dívida sendo paga em parcelas.', 'Liga a cobrança automática das parcelas no vencimento, com juros, até quitar.', 'Marque e preencha valor devido, parcela, frequência, juros e o dia da próxima parcela. Quando a dívida chega a zero, desliga sozinho.'),
+  'bank.loanTotal': Hx('Quanto ainda falta pagar do empréstimo (saldo devedor).', 'Os juros são calculados sobre este valor, e cada parcela abate dele.', 'Digite o total devido hoje. Ex.: 10000. O app atualiza sozinho a cada parcela paga.'),
+  'settings.loan.installment': Hx('O valor de cada parcela.', 'É o que sai do saldo em cada vencimento. Primeiro paga os juros; o resto abate a dívida.', 'Digite o valor de uma parcela. Ex.: 450. Se a parcela for menor que os juros, a dívida nunca termina; o app avisa.'),
+  'settings.loan.freq': Hx('De quanto em quanto tempo a parcela vence.', 'Mensal = a cada 30 dias do jogo. Semanal = a cada 7 dias.', 'Escolha conforme o contrato do empréstimo. Financiamentos costumam ser mensais.'),
+  'settings.loan.rate': Hx('Juros cobrados por mês sobre o saldo devedor.', 'Torna o empréstimo realista: quanto maior o juro, mais caro fica e mais parcelas faltam.', 'Digite a taxa mensal em %. Ex.: 1 = 1% ao mês. Use 0 para empréstimo sem juros. Na frequência semanal, o app usa a taxa proporcional (7/30).'),
+  'career.loanNext': Hx('O dia do jogo em que vence a próxima parcela.', 'Quando o calendário chega neste dia, a parcela sai do saldo e a data avança 7 ou 30 dias.', 'Normalmente o app preenche sozinho. Mude só para alinhar com uma data específica.'),
+  /* --- Chaves que ligam blocos inteiros --- */
+  'settings.market.on': Hx('Liga a conversão do frete do jogo do caminhão para valores de mercado.', 'Sem ela, comissões e percentuais usam o frete inflado do ATS e o motorista ganha muito acima da realidade.', 'Deixe ligado. Ajuste o fator dentro do bloco.'),
+  'settings.borrowed.on': Hx('Liga as viagens de carro (fretes fora do contrato).', 'Desligado, a opção Carro some do lançamento de viagem.', 'Ligue se você também faz fretes com carro no jogo.'),
+  'settings.payroll.lagOn': Hx('Liga o atraso no pagamento (pay lag).', 'Ligado, a semana trabalhada é paga na semana seguinte, como nos EUA. Desligado, o holerite cai assim que a semana é fechada.', 'Deixe ligado para mais realismo.'),
+  'settings.hos.on': Hx('Liga os alertas de jornada da FMCSA (Hours of Service).', 'Usa as horas lançadas nas viagens para avisar quando as regras federais são quebradas.', 'Ligue e preencha horas de direção e de serviço nas viagens.'),
+  'contract.terms.opCosts.on': Hx('Liga os custos de operar o próprio caminhão.', 'Para lease e owner-operator: manutenção, pneus e seguro por milha, e parcela e licenças por semana. No Company Driver o caminhão é da empresa, então fica desligado.', 'Ligue se o contrato é de lease ou owner-operator e confira os valores.'),
+  /* --- Frete de mercado e bônus --- */
+  'settings.market.mode': Hx('A forma de converter o frete do jogo em frete de mercado.', 'O ATS paga muito mais que a realidade. A comissão e o percentual do motorista são calculados sobre o frete de mercado, não sobre o do jogo.', '"Multiplicar" usa um fator sobre o valor do jogo (mantém as diferenças entre cargas). "Por milha" ignora o valor do jogo e usa só a distância.'),
+  'settings.market.factor': Hx('O número que multiplica o frete do jogo do caminhão.', 'Traz o frete para um valor real. Com 0,10, uma carga de $4.543 em 184 mi vira $454 (cerca de $2,47/mi, próximo do mercado americano).', 'Use número decimal com ponto ou vírgula. 0,10 é o recomendado. Aumente para ganhar mais por comissão; diminua para ficar mais difícil.'),
+  'settings.market.rpm': Hx('O valor do frete de mercado por milha.', 'No modo "por milha", frete de mercado = distância × este valor.', 'Digite em dólares por milha. Referência: o custo real de operar um caminhão é cerca de $2,34/mi (ATRI 2025), e o frete costuma ficar um pouco acima disso.'),
+  'settings.tripBonus': Hx('Se o bônus informado nas viagens de caminhão entra no salário.', 'Alguns jogadores preferem ignorar o bônus do jogo para não inflar o ganho.', 'Marque para somar 100% do bônus da viagem no salário bruto da semana.'),
+  'settings.borrowed.bonusOn': Hx('Se o bônus informado nas viagens de carro entra no resultado do carro.', 'Permite ligar ou desligar o bônus só do carro.', 'Marque para somar. O fator do carro pode converter o bônus também (opção em Viagens de carro).'),
+  /* --- Custos de vida --- */
+  'settings.costs.mealsMode': Hx('Como o app conta as refeições.', '"Por viagem": você lança cafés, almoços e jantas em cada viagem. "Por dia trabalhado": o app cobra as refeições escolhidas uma vez por dia com viagem de caminhão, sem duplicar quando há duas viagens no mesmo dia.', 'Escolha "por dia" para menos digitação. As viagens de carro continuam com refeições lançadas manualmente.'),
+  'settings.costs.auto': Hx('Quais refeições o app cobra sozinho em cada dia com viagem de caminhão.', 'Evita lançar a mesma refeição várias vezes.', 'Marque as refeições que o motorista faz na rua num dia normal de trabalho. Local: geralmente só almoço. OTR: as três.'),
+  'settings.costs.breakfast': Hx('Preço de um café da manhã na estrada.', 'Cada café lançado (ou automático) sai do bolso do motorista nas despesas de viagem.', 'Marque para cobrar e digite o preço. Padrão: $15.'),
+  'settings.costs.lunch': Hx('Preço de um almoço na estrada.', 'Cada almoço sai das despesas de viagem.', 'Marque para cobrar e digite o preço. Padrão: $35.'),
+  'settings.costs.dinner': Hx('Preço de um jantar na estrada.', 'Cada jantar sai das despesas de viagem.', 'Marque para cobrar e digite o preço. Padrão: $30. Café + almoço + jantar = $80, igual à diária do IRS para caminhoneiros.'),
+  'settings.costs.hotel': Hx('Preço de uma noite em hotel ou motel.', 'Cobrado por noite lançada na viagem, quando o contrato diz que o motorista paga o hotel. No W-2 a empresa costuma pagar.', 'Marque para cobrar e digite o preço por noite. Padrão: $80.'),
+  'settings.costs.housing': Hx('Aluguel e contas de casa do motorista por semana.', 'É a principal conta fixa: sai toda semana pelo calendário (ou no fechamento, se a cobrança automática estiver desligada).', 'Marque para cobrar e digite o valor semanal. Padrão: $500 (cerca de $2.150 por mês).'),
+  /* --- Impostos --- */
+  'settings.taxes.filing': Hx('Como o motorista declara o imposto de renda nos EUA.', 'Muda a dedução padrão e as faixas da tabela: casado declarando junto paga menos imposto sobre o mesmo salário.', 'Escolha "Solteiro" se não houver cônjuge na declaração.'),
+  'settings.taxes.statePct': Hx('Imposto de renda do estado onde o motorista mora.', 'É descontado do contracheque junto com o federal.', 'Digite a alíquota em %. Nevada não cobra (0). Califórnia, por exemplo, varia de 1% a 13%.'),
+  'settings.taxes.federal': Hx('Como calcular o imposto de renda federal.', '"Tabela progressiva" usa as faixas oficiais de 2026 (10% a 37%) sobre o salário anualizado. "Alíquota fixa" aplica um % simples.', 'Deixe na tabela para mais realismo.'),
+  'settings.taxes.flatPct': Hx('Percentual fixo de imposto federal.', 'Usado só no modo "alíquota fixa".', 'Digite o % sobre o salário tributável. Ex.: 12.'),
+  'settings.taxes.ficaPct': Hx('FICA: contribuição do empregado para a Seguridade Social (6,2%) e o Medicare (1,45%).', 'Descontada do salário de quem é W-2.', 'Deixe 7,65. Só mude se quiser simular outra regra.'),
+  'settings.taxes.sePct': Hx('Self-employment tax: a versão do FICA para autônomos (1099), que pagam a parte do empregado e a do patrão.', 'Incide sobre 92,35% do lucro do negócio (receita menos combustível, pedágios, danos e custos do caminhão). Plano de saúde e aposentadoria não reduzem esse imposto, só o imposto de renda.', 'Deixe 15,3.'),
+  /* --- Carro --- */
+  'settings.borrowed.factor': Hx('O número que multiplica o frete do jogo nas viagens de carro.', 'Equilibra o carro: ele deve ser divertido, mas render menos que o caminhão. Vale para emprestado e próprio.', 'Padrão: 0,40. Veja a comparação no fim deste bloco: o ideal é emprestado entre 35% e 50% e próprio entre 55% e 75% de uma viagem de caminhão.'),
+  'settings.borrowed.bonusFactor': Hx('Se o bônus da viagem de carro também é multiplicado pelo fator.', 'Sem isso, um bônus de $353 valeria mais que o próprio frete convertido.', 'Deixe marcado para manter o equilíbrio.'),
+  'settings.borrowed.pct': Hx('A parte do frete de mercado que o motorista recebe com carro emprestado.', 'Como o dono do carro paga combustível, pedágio e danos, o motorista fica só com uma parte.', 'Digite em %. Padrão: 35.'),
+  'settings.borrowed.personal': Hx('Se, no carro emprestado, as despesas pessoais continuam com o motorista.', 'Refeições, hotel e multas são do motorista mesmo dirigindo o carro de outra pessoa.', 'Deixe marcado. Desmarcado, o carro emprestado não tem nenhum custo.'),
+  'settings.borrowed.ownOn': Hx('Se o motorista tem um carro próprio para fazer fretes.', 'Libera a opção "Próprio" no lançamento de viagem de carro.', 'Marque se o personagem tem carro. Ele recebe 100% do frete, mas paga todos os custos.'),
+  'settings.borrowed.costPerMile': Hx('Quanto o carro próprio custa por milha rodada, além do combustível.', 'Representa manutenção, pneus, seguro e a perda de valor do carro (depreciação).', 'Digite em dólares por milha. Padrão: $0,50. Combustível e pedágio são lançados em cada viagem.'),
+  'settings.borrowed.settle': Hx('Quando o resultado da viagem de carro entra no saldo.', '"Na hora": como um bico pago na entrega. "Com o holerite": entra no salário da semana e segue o pay lag.', 'Escolha "na hora" para fretes avulsos.'),
+  /* --- Pay lag, jornada, calendário --- */
+  'settings.payroll.lagWeeks': Hx('Quantas semanas o pagamento atrasa em relação à semana trabalhada.', 'Nos EUA é comum receber a semana trabalhada só na sexta da semana seguinte (pay lag de 1 semana).', 'Digite 1 para o padrão americano, ou 0 para receber na mesma semana.'),
+  'settings.payroll.paydayWeekday': Hx('O dia da semana em que o holerite cai na conta.', 'Junto com o atraso, define a data de pagamento de cada semana.', 'Sexta é o mais comum.'),
+  'settings.payroll.autoPay': Hx('Depósito automático do holerite quando chega o dia.', 'Desmarcado, você precisa tocar em "Receber" no Holerite.', 'Deixe marcado para não esquecer pagamentos.'),
+  'settings.hos.cycle': Hx('O limite de horas de serviço acumuladas da FMCSA.', '70 horas em 8 dias vale para empresas que operam todos os dias da semana; 60 horas em 7 dias, para as que não operam todo dia. Ao atingir o limite, o motorista não pode mais dirigir até o total cair ou fazer o restart de 34 horas de folga.', 'Escolha 70/8 se a empresa roda a semana inteira (é o caso da maioria das transportadoras).'),
+  'settings.hos.restart': Hx('O restart de 34 horas: 34 horas seguidas de folga zeram a contagem do ciclo de 60/70 horas.', 'É opcional na regra federal e é o jeito normal de recomeçar a semana com o ciclo cheio. O app não sabe a hora de cada viagem, então considera que um dia inteiro sem viagem de caminhão equivale ao restart.', 'Deixe ligado. Desligado, o ciclo soma sempre os últimos 7 ou 8 dias, sem zerar com a folga.'),
+  'settings.hos.radius': Hx('Raio da isenção de curta distância (short-haul), em milhas aéreas a partir da base.', 'Motorista local dentro do raio e com até 14h de jornada não precisa de diário eletrônico nem da pausa de 30 min.', 'Regra atual: 150. O app avisa quando uma viagem passa de cerca de 172 milhas de estrada.'),
+  'settings.hos.shortHaul': Hx('Aplicar a isenção de curta distância quando a operação for local.', 'Muda os alertas de jornada para a regra local.', 'Deixe marcado para operações Local/Day Cab.'),
+  'gameDay': Hx('O dia atual no calendário do jogo.', 'Define o dia das novas viagens, as cobranças e os pagamentos.', 'Normalmente você usa os botões − e + no topo. Aqui dá para pular direto para um dia.'),
+  'settings.day1Weekday': Hx('O dia da semana que corresponde ao dia 1 do jogo.', 'Faz o app saber quando começa cada semana, quando é sexta (pagamento) e quando é segunda (contas).', 'Escolha o dia da semana do seu dia 1. A planilha usa segunda.'),
+  'cities': Hx('Lista de cidades sugeridas.', 'Aparecem como sugestão ao digitar origem e destino. Cidades novas usadas em viagens entram sozinhas.', 'Digite o nome e toque em Adicionar.'),
+  'lists.operation': Hx('Os tipos de operação que aparecem no contrato.', 'O padrão segue o mercado americano: Local (volta para casa todo dia), Regional (fica fora alguns dias), Dedicated (cliente fixo) e OTR (semanas na estrada).', 'Para o app reconhecer o tipo, use nomes com "Local" ou "Day Cab" (isenção de curta distância) e "OTR", "Long Haul" ou "Sleeper" (per diem). Os demais seguem as regras completas de jornada.'),
+  /* --- Motorista --- */
+  'profile.name': Hx('O nome do motorista.', 'Aparece no topo do app.', 'Digite o nome do personagem.'),
+  'profile.nationality': Hx('A nacionalidade do motorista.', 'Informativo, junto com o status migratório.', 'Ex.: Brasileiro.'),
+  'profile.level': Hx('O nível do motorista no jogo.', 'Informativo, para acompanhar a evolução no ATS.', 'Digite o nível que aparece no seu perfil do jogo.'),
+  'profile.experience': Hx('O tempo de experiência como motorista profissional.', 'Define a faixa de valor por milha (CPM) do mercado. Recém-formado ganha $0,38–0,45/mi; com 5+ anos, $0,60–0,72/mi.', 'Escolha a faixa e, no contrato por milha, use o botão "Usar CPM da experiência".'),
+  'profile.visa': Hx('A situação migratória para tirar a CDL (carteira de caminhão).', 'Desde 15/03/2026, estrangeiro sem residência permanente só tira a CDL não-domiciliada com visto H-2A, H-2B ou E-2. Com outro visto, o Painel mostra um aviso.', 'Escolha a situação do personagem.'),
+  /* --- Contrato --- */
+  'contract.companyId': Hx('A empresa com quem o motorista tem este contrato.', 'Identifica o empregador no histórico e no topo do app.', 'Escolha na lista. Para incluir uma nova, use Carreira › Empresas › Cadastrar empresa.'),
+  'contract.classification': Hx('O tipo de vínculo com a empresa.', 'Define o tipo fiscal (W-2 ou 1099) e o padrão das condições: quem paga as despesas, percentual, custos do caminhão.', 'Company Driver = empregado com caminhão da empresa. Lease = arrenda o caminhão. Owner-Operator = caminhão próprio. Depois de mudar, toque em "Restaurar condições padrão".'),
+  'contract.operation': Hx('O tipo de rota, nos termos do mercado americano.', 'Local (Day Cab): volta para casa todo dia e pode usar a isenção de curta distância. Regional: fica fora alguns dias, com regras completas de jornada. Dedicated: rota fixa para um cliente. OTR / Long Haul: semanas na estrada, dormindo no caminhão, com per diem.', 'Escolha o que mais se parece com as viagens que você faz no jogo.'),
+  'contract.startDay': Hx('O dia do jogo em que este contrato começou.', 'Aparece no histórico de empresas.', 'Use o dia do calendário do jogo.'),
+  'contract.renomeLevel': Hx('O nível de renome do motorista nesta empresa.', 'Multiplica o bônus por nível de renome (se ligado).', 'Digite o nível atual. Suba conforme a carreira avança.'),
+  'contract.truck': Hx('O caminhão usado neste contrato.', 'Informativo, para o histórico.', 'Ex.: Freightliner Cascadia.'),
+  'contract.trailer': Hx('O trailer usado neste contrato.', 'Informativo, para o histórico.', 'Ex.: Dry van 53 pés.'),
+  'contract.terms.contract.mode': Hx('Como o salário do motorista é calculado.', 'Fixo semanal: valor fixo + comissão. Por hora: horas de serviço × valor. Por milha (CPM): milhas × valor. Percentual: parte do frete, sem fixo.', 'Escolha o modelo do seu contrato. Viagens já lançadas continuam no modelo antigo.'),
+  'contract.terms.contract.weekly.value': Hx('O salário fixo por semana.', 'É pago a cada semana fechada, mesmo com poucas viagens.', 'Digite o valor semanal. Padrão: $1.300.'),
+  'contract.terms.contract.weekly.commission': Hx('Comissão sobre o frete de mercado de cada viagem de caminhão.', 'Premia quem faz mais fretes.', 'Marque para pagar e digite o %. Padrão: 5.'),
+  'contract.terms.contract.hourly.rate': Hx('Quanto o motorista ganha por hora de serviço.', 'Base do pagamento por hora: horas lançadas na viagem × este valor.', 'Digite em dólares por hora. Mercado local 2026: $22–32.'),
+  'contract.terms.contract.hourly.commission': Hx('Comissão sobre o frete de mercado no modelo por hora.', 'Extra além das horas.', 'Marque e digite o %.'),
+  'contract.terms.contract.hourly.dailyCap': Hx('O máximo de horas pagas por dia.', 'Horas acima disso não entram no salário.', 'Marque e digite as horas. Padrão: 10.'),
+  'contract.terms.contract.hours': Hx('O máximo de horas pagas por semana (horas contratuais).', 'Limita o salário semanal no modelo por hora.', 'Marque e digite as horas. Padrão: 50.'),
+  'contract.terms.contract.hourly.otAfter': Hx('Hora extra: a partir de quantas horas na semana a hora passa a valer mais.', 'Pela lei americana (FLSA), caminhoneiros são isentos de hora extra. Ligue só se a empresa do seu enredo paga.', 'Marque e digite o limite. Ex.: 40.'),
+  'contract.terms.contract.hourly.otMult': Hx('Quanto vale a hora extra em relação à normal.', '1,5 = 50% a mais.', 'Digite o multiplicador. Ex.: 1,5.'),
+  'contract.terms.contract.cpm.rate': Hx('Quanto o motorista ganha por milha rodada (CPM, cents per mile).', 'Base do pagamento por milha: distância da viagem × este valor.', 'Digite em dólares por milha. Ex.: 0,55 = 55 centavos. Use o botão ao lado para a faixa da sua experiência.'),
+  'contract.terms.contract.cpm.detentionRate': Hx('Detention: pagamento pelas horas esperando para carregar ou descarregar.', 'Compensa o tempo parado nas docas além das horas livres.', 'Marque e digite o valor por hora. Mercado: $15–25.'),
+  'contract.terms.contract.cpm.detentionFree': Hx('Quantas horas de espera são de graça antes de começar a pagar detention.', 'Só as horas acima deste limite são pagas.', 'Padrão: 2.'),
+  'contract.terms.contract.cpm.stopRate': Hx('Stop pay: valor por parada extra além da coleta e da entrega.', 'Compensa entregas com várias paradas.', 'Marque e digite o valor por parada. Mercado: $25–75.'),
+  'contract.terms.contract.cpm.commission': Hx('Comissão sobre o frete no modelo por milha.', 'Raro no CPM; vem desligada.', 'Marque e digite o % só se o contrato prevê.'),
+  'contract.terms.contract.percent.commission': Hx('A parte do frete de mercado que fica com o motorista.', 'É todo o ganho no modelo percentual.', 'Digite em %. Motorista de empresa: 25–30%. Lease: cerca de 70%. Owner-operator: 75–100%, pagando o caminhão.'),
+  'contract.terms.contract.minimum.value': Hx('O mínimo garantido por semana.', 'Se o salário da semana ficar abaixo, a empresa completa a diferença.', 'Marque e digite o valor. Comum: $1.100–1.500.'),
+  'contract.terms.contract.extras.layoverRate': Hx('Layover: pagamento por dia parado esperando carga, longe de casa.', 'Compensa dias perdidos.', 'Marque e digite o valor por dia. Mercado: $75–300. Lance os dias na viagem.'),
+  'contract.terms.contract.extras.breakdownRate': Hx('Breakdown: pagamento por hora com o caminhão quebrado.', 'Compensa o tempo parado por defeito.', 'Marque e digite o valor por hora. Lance as horas na viagem.'),
+  'contract.terms.contract.extras.tarpRate': Hx('Tarp pay: pagamento por cobrir a carga com lona.', 'Comum só em carreta aberta (flatbed).', 'Marque se você puxa flatbed e digite o valor por carga. Mercado: $50–100.'),
+  'contract.terms.renome.perLevel': Hx('Bônus percentual por nível de renome na empresa.', 'Bônus = % por nível × nível de renome, sobre salário base e comissão.', 'Marque e digite o % por nível. Ex.: 2 com renome 3 = 6%.'),
+  'contract.terms.safety.amount': Hx('Bônus de segurança: prêmio por semanas seguidas sem multa nem dano.', 'Incentiva dirigir com cuidado. Uma multa ou dano zera a contagem.', 'Marque e digite o valor do prêmio. Mercado: $100–500 por trimestre.'),
+  'contract.terms.safety.weeks': Hx('Quantas semanas seguidas sem multa nem dano para ganhar o bônus.', 'Define a frequência do prêmio.', '13 semanas = um trimestre.'),
+  'contract.terms.expenses.fuel': Hx('Quem paga o combustível das viagens de caminhão.', 'Se for a empresa, o valor não sai do bolso do motorista e o campo some do lançamento.', 'W-2: empresa. Lease/owner: motorista.'),
+  'contract.terms.expenses.tolls': Hx('Quem paga os pedágios.', 'Igual ao combustível.', 'W-2: empresa. Lease/owner: motorista.'),
+  'contract.terms.expenses.hotel': Hx('Quem paga hotel quando o motorista dorme fora.', 'Se for a empresa, as noites lançadas não saem do bolso.', 'W-2: empresa. Lease/owner: motorista.'),
+  'contract.terms.expenses.fines': Hx('Quem paga as multas de trânsito.', 'Multa é responsabilidade pessoal; quase sempre é do motorista.', 'Deixe "Motorista paga".'),
+  'contract.terms.expenses.damage': Hx('Quem paga danos à carga ou ao caminhão.', 'Franquia: o motorista paga só até um limite por ocorrência; o resto é do seguro da empresa.', 'W-2: franquia. Lease/owner: motorista paga tudo.'),
+  'contract.terms.expenses.deductible': Hx('O limite que o motorista paga por dano (franquia).', 'Danos acima disso ficam com a empresa.', 'Digite o valor. Comum: $500–1.000.'),
+  'contract.terms.benefits.health': Hx('Plano de saúde descontado do contracheque por semana.', 'Desconto antes do imposto, o que reduz um pouco o imposto pago.', 'Marque e digite o valor semanal. Ex.: 45.'),
+  'contract.terms.benefits.k401Pct': Hx('401(k): aposentadoria privada descontada do salário.', 'Sai antes do imposto e fica acumulada (aparece no Holerite). É dinheiro guardado, não perdido.', 'Marque e digite o % do salário bruto. Ex.: 4.'),
+  'contract.terms.perDiem.rate': Hx('Per diem: diária paga sem imposto por noite fora de casa.', 'Parte do salário vira diária isenta, então o motorista OTR paga menos imposto.', 'Marque e digite o valor por noite. IRS 2026: $80. Na viagem, marque "Dormiu fora de casa".'),
+  'contract.terms.opCosts.maintenance': Hx('Custo de manutenção do caminhão por milha.', 'Para quem paga o próprio caminhão (lease/owner).', 'Referência ATRI 2025: $0,404/mi.'),
+  'contract.terms.opCosts.tires': Hx('Custo de pneus por milha.', 'Desgaste dos pneus do caminhão próprio.', 'Referência ATRI 2025: $0,05/mi.'),
+  'contract.terms.opCosts.insurance': Hx('Custo do seguro do caminhão por milha.', 'Seguro de responsabilidade e de carga.', 'Estimativa de $0,08 a $0,16/mi; autoridade própria paga mais.'),
+  'contract.terms.opCosts.truckWeekly': Hx('Parcela do financiamento ou do leasing do caminhão por semana.', 'Conta fixa, cobrada toda semana com a moradia.', 'Digite o valor semanal. Ex.: 600–650.'),
+  'contract.terms.opCosts.otherWeekly': Hx('Licenças, IFTA (imposto de combustível), ELD (diário eletrônico) e escrow por semana.', 'Custos administrativos de quem opera o próprio caminhão.', 'Digite o valor semanal. Ex.: 60–250.'),
+  /* --- Lançamento de viagem --- */
+  'trip.type': Hx('O veículo da viagem.', 'Caminhão: viagem do contrato, entra no salário. Carro: frete avulso fora do contrato, com cálculo próprio.', 'Escolha conforme o que você dirigiu no jogo.'),
+  'trip.carmode': Hx('De quem é o carro.', 'Emprestado: você recebe uma parte do frete e o dono paga os custos do carro. Próprio: você recebe 100% do frete e paga tudo, inclusive o desgaste do carro.', 'Escolha. "Próprio" só aparece se estiver ligado em Ajustes › Viagens de carro.'),
+  'trip.contract': Hx('O contrato usado para calcular esta viagem.', 'Fica gravado na viagem. Mudanças futuras no contrato não alteram viagens já lançadas.', 'Ao editar uma viagem antiga, "Usar contrato atual" aplica as regras de hoje.'),
+  'trip.origin': Hx('A cidade de onde saiu a carga.', 'Aparece no diário e no histórico.', 'Digite ou escolha da lista. O app sugere o destino da última viagem.'),
+  'trip.dest': Hx('A cidade de entrega.', 'Aparece no diário e no histórico. É obrigatório.', 'Digite ou escolha da lista.'),
+  'trip.miles': Hx('A distância da viagem em milhas.', 'Base do pagamento por milha, dos custos por milha e do alerta de raio local.', 'Use a distância mostrada no jogo ao aceitar o frete.'),
+  'trip.freight': Hx('O valor do frete que o jogo mostra na entrega.', 'O app converte para frete de mercado e calcula comissão ou percentual. Embaixo aparece o valor convertido.', 'Digite o valor do jogo, sem símbolo. Ex.: 4543.'),
+  'trip.day': Hx('O dia do jogo em que a viagem foi feita.', 'Agrupa as viagens por dia e define em qual semana ela entra.', 'Vem preenchido com o dia atual.'),
+  'trip.bonus': Hx('O bônus que o jogo paga além do frete (entrega rápida, sem danos etc.).', 'Somado ao ganho, conforme as opções de bônus em Ajustes.', 'Digite o valor do jogo. Pode ser negativo se o jogo descontou.'),
+  'trip.meals': Hx('Refeições feitas e noites dormidas em hotel nesta viagem.', 'Saem do bolso do motorista nas despesas de viagem (o hotel, só se o contrato mandar o motorista pagar).', 'Use + e −. Com refeições por dia trabalhado, só o hotel aparece aqui.'),
+  'trip.status': Hx('Como foi a entrega no jogo.', 'Informativo, para o diário e o histórico.', 'Escolha o resultado que o jogo mostrou.'),
+  'trip.fines': Hx('Multas de trânsito recebidas nesta viagem.', 'Saem do bolso do motorista e zeram a contagem do bônus de segurança.', 'Digite o total das multas do jogo.'),
+  'trip.damage': Hx('Valor dos danos à carga ou ao veículo.', 'O motorista paga conforme o contrato: tudo, só a franquia ou nada. Também zera a contagem do bônus de segurança.', 'Digite o valor que o jogo cobrou de dano.'),
+  'trip.fuel': Hx('Combustível gasto na viagem.', 'Sai do bolso só se o contrato mandar o motorista pagar (ou no carro próprio).', 'Digite o valor pago nos postos. Some quando a empresa paga.'),
+  'trip.tolls': Hx('Pedágios pagos na viagem.', 'Igual ao combustível.', 'Digite o total de pedágios.'),
+  'trip.hours': Hx('Horas de serviço (on-duty): direção + carga, descarga, inspeção e espera.', 'No contrato por hora, é a base do salário. Também conta para os limites de jornada (14h por dia, 70h no ciclo).', 'Digite as horas do dia de trabalho nesta viagem. Ex.: 9,5.'),
+  'trip.drive': Hx('Horas efetivamente dirigindo.', 'Controle de jornada: o limite federal é 11h de direção por dia, e após 8h é preciso uma pausa de 30 min.', 'Digite as horas ao volante. Ex.: 6.'),
+  'trip.detention': Hx('Horas esperando nas docas para carregar ou descarregar.', 'No contrato por milha, as horas acima das horas livres viram detention.', 'Digite o total de horas de espera.'),
+  'trip.stops': Hx('Paradas extras além da coleta e da entrega.', 'No contrato por milha, cada parada extra gera stop pay.', 'Digite a quantidade.'),
+  'trip.brk': Hx('Se o motorista fez a pausa obrigatória de 30 minutos.', 'Exigida após 8h de direção (exceto na isenção local). Sem ela, o app mostra um alerta.', 'Marque se fez a pausa.'),
+  'trip.away': Hx('Se o motorista dormiu fora de casa por causa desta viagem.', 'Conta um dia de per diem (diária isenta de imposto), se o contrato tiver per diem.', 'Marque nas viagens OTR com pernoite.'),
+  'trip.tarp': Hx('Se a carga precisou ser coberta com lona.', 'Gera tarp pay, se o contrato pagar.', 'Marque em cargas de flatbed com lona.'),
+  'trip.layover': Hx('Dias parado esperando carga, longe de casa.', 'Gera layover pay, se o contrato pagar.', 'Digite o número de dias.'),
+  'trip.breakdown': Hx('Horas com o caminhão quebrado.', 'Gera breakdown pay, se o contrato pagar.', 'Digite as horas paradas.'),
+  /* --- Empresas, troca de contrato, ajuste de saldo --- */
+  'company.name': Hx('O nome da empresa.', 'Aparece nos contratos, no histórico e no topo do app.', 'Ex.: ADM Transport.'),
+  'company.hq': Hx('A cidade e o estado da sede ou garagem.', 'A primeira cidade vira a origem sugerida nas viagens.', 'Ex.: Carson City / NV.'),
+  'company.dot': Hx('Números de registro da empresa nos EUA (USDOT e MC).', 'Informativo, para dar realismo.', 'Opcional. Ex.: USDOT 1234567.'),
+  'company.notes': Hx('Anotações livres sobre a empresa.', 'Para lembrar detalhes do enredo.', 'Ex.: frota de reefer, base em Reno.'),
+  'nc.co': Hx('A empresa do novo contrato.', 'Pode ser a mesma (promoção, mudança de vínculo) ou outra.', 'Escolha ou cadastre uma nova.'),
+  'nc.cls': Hx('O tipo de vínculo do novo contrato.', 'Define o tipo fiscal e o padrão das condições.', 'Ex.: passar de Company Driver para Owner-Operator.'),
+  'nc.op': Hx('O tipo de rota do novo contrato.', 'Muda a jornada (isenção local) e o per diem.', 'Escolha Local, Regional, Dedicated ou OTR.'),
+  'nc.day': Hx('O dia do jogo em que o novo contrato começa.', 'O contrato atual termina na véspera.', 'Normalmente o dia de hoje.'),
+  'nc.reason': Hx('Por que o contrato atual terminou.', 'Fica registrado no histórico de empresas.', 'Escolha o motivo.'),
+  'nc.terms': Hx('De onde vêm as condições do novo contrato.', '"Padrão" aplica as condições típicas da classificação; "Copiar" repete as atuais.', 'Escolha "Padrão" ao mudar de tipo de vínculo.'),
+  'adj.amount': Hx('O valor a lançar no saldo.', 'Para entradas e saídas fora das viagens: compras, prêmios, consertos, correções.', 'Positivo para entrada, negativo para saída. Ex.: -250.'),
+  'adj.day': Hx('O dia do jogo do lançamento.', 'Ordena o extrato.', 'Normalmente o dia de hoje.'),
+  'adj.desc': Hx('A descrição do lançamento.', 'Aparece no extrato.', 'Ex.: Troca de pneus.'),
+  /* --- Mensagens e totais das telas --- */
+  'ui.receber': Hx('Holerites já gerados que ainda não caíram na conta.', 'Mostra quanto vai entrar e quando.', 'Automático: aparece depois de fechar uma semana.'),
+  'ui.totalsaldo': Hx('Saldo bancário + holerites a receber.', 'Mostra o dinheiro total com que o motorista pode contar.', ''),
+  'ui.bruto': Hx('Tudo que o motorista ganhou na semana antes de impostos: salário base, comissões, extras e bônus.', 'É o "gross pay" do contracheque americano.', ''),
+  'ui.impostos': Hx('O que a empresa retém do contracheque: imposto de renda federal, FICA (Seguridade Social e Medicare), imposto estadual, plano de saúde e 401(k).', 'O que sobra é o líquido do holerite, que cai na conta no dia do pagamento.', ''),
+  'ui.reserva': Hx('O dinheiro separado para os impostos do autônomo (1099): imposto de renda federal estimado e self-employment tax, mais plano de saúde e aposentadoria.', 'Na vida real a transportadora paga o acerto (settlement) sem reter imposto, e o autônomo paga o imposto estimado a cada trimestre (abril, junho, setembro e janeiro). Para o saldo não enganar, o app separa essa reserva toda semana.', ''),
+  'settings.taxes.qbi': Hx('A dedução QBI (Qualified Business Income, Section 199A): o autônomo abate 20% do lucro do negócio antes de calcular o imposto de renda.', 'Reduz o imposto de renda de lease e owner-operator. Não muda o self-employment tax. É permanente na lei americana desde 2025.', 'Deixe ligado. Só vale para contratos 1099; no W-2 não tem efeito.'),
+  'ui.despesas': Hx('Gastos das viagens pagos pelo motorista: refeições, hotel, combustível, pedágio, multas e danos (conforme o contrato).', 'Saem do saldo quando a semana é fechada.', ''),
+  'ui.caminhao': Hx('Custos de quem paga o próprio caminhão: manutenção, pneus, seguro, parcela e licenças.', 'Os custos por milha saem no fechamento; parcela e licenças saem toda semana pelo calendário.', ''),
+  'ui.fixos': Hx('Moradia e parcela do empréstimo.', 'Com a cobrança automática, saem do saldo no dia de vencimento, mesmo sem salário.', ''),
+  'ui.lucro': Hx('Quanto sobra de verdade na semana: bruto − impostos − despesas − custos fixos.', 'Mostra se a semana deu lucro ou prejuízo.', ''),
+  'ui.hos': Hx('Controle das regras federais de jornada (Hours of Service).', 'Soma as horas lançadas nas viagens e avisa quando passa de 11h dirigindo, 14h de jornada, falta a pausa de 30 min ou estoura o ciclo semanal.', 'Preencha horas de direção e de serviço em "Jornada e pagamentos extras" de cada viagem.'),
+  'ui.holerite': Hx('O contracheque de cada semana fechada.', 'Mostra bruto, descontos e líquido. O líquido cai na conta no dia do pagamento (pay lag).', 'Toque em "Receber" quando estiver disponível, ou deixe o depósito automático ligado.'),
+  'ui.extrato': Hx('Todas as entradas e saídas do saldo.', 'Holerites, contas fixas, parcelas, viagens de carro e ajustes manuais, com dia e valor.', 'Use "Ajustar saldo" para lançar algo fora das viagens.'),
+  'ui.seguranca': Hx('Contagem de semanas seguidas sem multa, dano ou infração de jornada.', 'Ao completar a meta do contrato, o bônus entra no holerite da semana. Uma multa de trânsito, um dano ou uma infração de jornada (se as consequências estiverem ligadas) zeram a contagem.', 'Dirija com cuidado e respeite as horas de jornada.'),
+  'ui.negativo': Hx('O saldo bancário ficou abaixo de zero.', 'Na vida real o banco cobra taxas de cheque especial e as contas começam a atrasar. No app nada é bloqueado: as contas fixas e parcelas continuam saindo e o saldo fica negativo até entrar dinheiro.', 'Para sair do negativo: receba os holerites pendentes (Holerite), faça fretes de carro, reduza a moradia (Ajustes › Custos de vida) ou registre um empréstimo (Ajustes › Início e contas fixas › Empréstimo ativo), lançando o valor recebido em "Ajustar saldo".'),
+  'ui.fechar': Hx('A semana do calendário do jogo acabou, mas ainda não foi fechada no app.', 'Fechar gera o holerite (pago no dia do pagamento), cobra as despesas da semana, aplica bônus e infrações e move as viagens para o histórico. Sem fechar, novas viagens continuam caindo na mesma semana e o holerite não é gerado, então o dinheiro não entra.', 'Toque em "Fechar semana" assim que passar do domingo do jogo.'),
+  'ui.visto': Hx('O status migratório do motorista não permite tirar a CDL não-domiciliada.', 'Desde 15/03/2026, estrangeiro sem residência permanente só tira a CDL com visto H-2A, H-2B ou E-2. Na vida real, dirigir caminhão comercial sem CDL válida tira o motorista de serviço e gera multa para ele e para a empresa. O app não bloqueia nada: o aviso serve para o enredo.', 'Se o personagem tem um desses vistos ou é residente, ajuste em Carreira › Motorista › Status migratório.'),
+  'ui.registro': Hx('O histórico de infrações de jornada do motorista nos últimos 56 dias (8 semanas).', 'Representa o registro de segurança (CSA) que empresas e fiscais consultam. Na vida real, muitas infrações levam a advertências, perda de bônus e até demissão.', 'Infrações entram quando a semana é fechada. Com 3 ou mais no período, o app mostra o motorista em risco; elas saem do registro depois de 8 semanas.'),
+  'ui.infracoes': Hx('Alertas de jornada da semana em aberto que contam como infração.', 'Mostra o que vai acontecer no fechamento se as horas continuarem assim.', 'Abra o Diário, toque em cada alerta para ver a explicação e corrija as horas se foram lançadas errado.'),
+  'settings.hos.penalties': Hx('Liga as consequências das infrações de jornada.', 'Ligado, infrações zeram o bônus de segurança, podem gerar multa numa fiscalização sorteada no fechamento da semana e ficam no registro de segurança. Desligado, os alertas são só informativos.', 'Deixe ligado para um jogo com risco real.'),
+  'settings.hos.inspectChance': Hx('A chance de cada infração ser pega numa fiscalização do DOT.', 'Na vida real nem toda infração é pega: depende de passar por balança ou blitz. O sorteio acontece ao fechar a semana.', 'Digite em %. 25 = uma em cada quatro infrações é pega. Use 100 para multar sempre.'),
+  'settings.hos.fine': Hx('O valor da multa por infração pega na fiscalização.', 'Debitado do saldo do motorista no fechamento. Multas reais variam muito por estado e gravidade, e as federais podem chegar a milhares de dólares, divididas entre motorista e empresa.', 'Digite o valor. Padrão: $1.000.'),
+  'settings.hos.resetSafety': Hx('Se uma infração de jornada zera a contagem do bônus de segurança.', 'Empresas costumam cortar o bônus de quem tem infração no registro.', 'Deixe marcado.'),
+  'data.sheet': Hx('Importação e exportação dos dados numa planilha do Excel, no formato próprio do app.', 'Para trazer a carreira de uma planilha (motorista, empresa, saldo e viagens) ou levar os dados do app para o Excel.', '"Baixar modelo" gera a planilha vazia com as abas Motorista, Empresa e Viagens e uma aba Leia-me com as regras. Preencha sem renomear abas nem colunas e use "Importar planilha". Se algo não bater (aba faltando, coluna errada, número inválido, veículo desconhecido), o app mostra a lista de erros com a linha e não altera nada. "Exportar planilha" gera o mesmo formato com os seus dados atuais.'),
+  'data.json': Hx('Backup completo de tudo: ajustes, contratos, empresas, viagens, holerites, extrato e histórico.', 'Para guardar uma cópia ou passar os dados entre a versão do Claude e a versão local (dist/index.html).', 'Exportar gera o arquivo; Importar substitui todos os dados atuais pelo arquivo escolhido.'),
+  /* --- Abas --- */
+  'tab.painel': Hx('O resumo da semana em aberto.', 'Mostra o que vai receber, o resultado da semana até agora e o botão para fechar a semana.', 'Lance as viagens pelo botão "+ Viagem" e feche a semana quando o calendário passar de domingo.'),
+  'tab.diario': Hx('O diário de bordo da semana: todas as viagens lançadas, dia a dia.', 'Toque numa viagem para editar ou excluir. A jornada aparece quando há horas lançadas.', ''),
+  'tab.historico': Hx('As semanas já fechadas.', 'Cada semana guarda o DRE e as viagens como estavam no fechamento.', 'Toque numa semana para ver os detalhes.'),
+  'tab.ajustes': Hx('As regras gerais do jogo: início, frete de mercado, custos de vida, impostos, carro, pagamento, jornada e calendário.', 'Valem para qualquer contrato. As condições do empregador ficam em Carreira › Contrato.', 'Toque num bloco para abrir. Fechado, ele mostra um resumo do que está configurado.'),
+  'tab.carreira': Hx('Quem é o motorista, para quem trabalha e em quais condições.', 'Motorista: dados pessoais. Contrato: salário, despesas e benefícios do emprego atual. Empresas: lista de empregadores.', 'Use "Trocar de contrato" para mudar de empresa ou de vínculo; o histórico fica guardado.')
+};
+
+/* ---------- Regras de gameplay: o que significa, consequências e como resolver ---------- */
+const Rx = (o, real, app, fix) => `<p><b>O que significa:</b> ${o}</p>${real ? `<p><b>Na vida real:</b> ${real}</p>` : ''}${app ? `<p><b>No app:</b> ${app}</p>` : ''}${fix ? `<p><b>Como resolver:</b> ${fix}</p>` : ''}`;
+function penaltyText() {
+  const h = (S && S.settings.hos) || {};
+  if (!h.penalties) return 'As consequências estão desligadas (Ajustes › Jornada): o alerta é só informativo e não afeta saldo nem bônus.';
+  return `Conta como infração da semana.${h.resetSafety ? ' Zera a contagem do bônus de segurança.' : ''} Ao fechar a semana, cada infração tem ${fmtN(h.inspectChance)}% de chance de ser pega numa fiscalização do DOT, com multa de ${fmt(h.fine)} debitada do saldo. Toda infração fica no registro de segurança do motorista (Carreira › Motorista).`;
+}
+function ruleHtml(code) {
+  const P = penaltyText();
+  return ({
+    drive11: Rx('Você somou mais de 11 horas dirigindo no mesmo dia. A FMCSA permite no máximo 11h ao volante depois de 10h seguidas de folga.',
+      'É uma infração grave de jornada. Numa inspeção na estrada (balança ou blitz do DOT), o motorista fica fora de serviço (out-of-service) até cumprir o descanso exigido, normalmente 10 horas seguidas. Gera multa e pontos no registro de segurança (CSA) do motorista e da empresa.',
+      P, 'No jogo, pare para dormir antes de passar de 11h dirigindo (o sono do ATS faz o papel das 10h de folga). Se a viagem era longa demais, lance as horas de cada dia no dia em que foram feitas. Se foi erro de digitação, edite a viagem.'),
+    duty14: Rx('O dia de trabalho passou de 14 horas. Depois de começar o turno, o motorista tem uma janela de 14h para dirigir; passado esse tempo, só volta a dirigir depois de 10h de descanso, mesmo que tenha dirigido pouco. Carga, descarga, espera e inspeção contam na janela.',
+      'Infração crítica: fora de serviço até cumprir o descanso, multa (a média citada para este tipo de infração passa de US$ 7 mil, somando motorista e empresa) e pontos no CSA. Na operação local, passar de 14h também faz perder a isenção de curta distância naquele dia.',
+      P, 'Confira as horas de serviço: com duas viagens no mesmo dia, cada uma deve ter só as horas dela, não o dia inteiro. Se passou mesmo, descanse 10h no jogo antes da próxima viagem ou deixe o resto do trabalho para o dia seguinte.'),
+    break30: Rx('Depois de 8 horas somadas de direção, o motorista precisa de uma pausa de pelo menos 30 minutos sem dirigir antes de continuar.',
+      'Infração de jornada: multa e pontos no CSA; numa inspeção, o motorista para até fazer a pausa. Quem está dentro da isenção de curta distância não precisa da pausa.',
+      P, 'No jogo, faça uma parada (posto ou área de descanso) antes de completar 8h dirigindo e marque "Fez a pausa de 30 min" na viagem. Se fez a pausa e esqueceu de marcar, edite a viagem.'),
+    radius: Rx('Na operação local, o motorista usa a isenção de curta distância (short-haul) se ficar a até 150 milhas aéreas da base e encerrar o dia em até 14h. Esta viagem foi mais longe (o app usa cerca de 172 mi de estrada como referência, já que não sabe a linha reta).',
+      'Não é uma infração. Mas naquele dia a isenção deixa de valer: o motorista precisa registrar o dia inteiro no diário eletrônico (ELD/logbook) e segue as regras completas, inclusive a pausa de 30 min após 8h de direção. No dia seguinte, se voltar a cumprir as condições, a isenção volta.',
+      'Aviso amarelo, sem multa nem efeito no bônus. Nesse dia o app passa a exigir a pausa de 30 min: se dirigiu mais de 8h sem marcar a pausa, aparece a infração "Faltou a pausa".',
+      'Se parou durante a viagem, marque "Fez a pausa de 30 min". Se o seu trabalho costuma passar de 150 mi aéreas, mude a operação do contrato para Regional ou OTR (Carreira › Contrato › Vínculo): as regras completas passam a valer sempre e o aviso some.'),
+    cycle: Rx('A soma das horas de serviço passou do limite do ciclo: 70h em 8 dias seguidos (ou 60h em 7 dias, conforme o ciclo escolhido).',
+      'Infração crítica (multa média citada perto de US$ 4,8 mil e pontos no CSA). O motorista fica fora de serviço até o total voltar para baixo do limite. O jeito de zerar o ciclo é o restart: 34 horas seguidas de folga.',
+      P, 'Tire um dia inteiro de folga: um dia do jogo sem viagem de caminhão conta como o restart de 34h e zera o ciclo. Depois, distribua as horas para ficar perto de 10h por dia ou menos.')
+  })[code] || '';
+}
+function ruleHelp(code, label) {
+  const txt = ruleHtml(code); if (!txt) return { btn: '', box: '' };
+  const id = 'hp' + (++_hid);
+  return { id, box: `<div class="help" id="${id}" hidden>${txt}</div>` };
+}
+
+let _hid = 0;
+// Título curto (eyebrow) com ajuda, para cartões e totais
+const eyeH = (key, label) => { const h = help(key, label); return `<div class="lab-row"><div class="eyebrow">${label}</div>${h.btn}</div>${h.box}`; };
+const helpKey = p => String(p || '').replace(/^contracts\.\d+\./, 'contract.');
+function helpFor(key) {
+  const k = helpKey(key);
+  const txt = HELP[k] || HELP[k.replace(/\.(on|val)$/, '')];
+  return txt || '';
+}
+// Botão "?" + caixa de ajuda (fechada). Retorna { btn, box }
+function help(key, label = '') {
+  const txt = helpFor(key);
+  if (!txt) return { btn: '', box: '' };
+  const id = 'hp' + (++_hid);
+  return { btn: `<button type="button" class="help-btn" data-help="${id}" aria-expanded="false" aria-controls="${id}" aria-label="Ajuda: ${esc(String(label).replace(/<[^>]+>/g, ''))}">?</button>`, box: `<div class="help" id="${id}" hidden>${txt}</div>` };
+}
+// Linha de rótulo com o botão de ajuda
+function labRow(key, label, forId) {
+  const h = help(key, label);
+  return { row: `<div class="lab-row">${forId ? `<label for="${forId}">${label}</label>` : `<span class="lab">${label}</span>`}${h.btn}</div>`, box: h.box };
+}

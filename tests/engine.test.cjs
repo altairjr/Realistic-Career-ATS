@@ -54,6 +54,23 @@ test('carro próprio: 100% do frete − $0,50/mi − combustível', () => {
   assert.equal(b.total, 217.9);
 });
 
+test('autônomo (1099): plano de saúde não reduz o self-employment tax; QBI reduz o imposto de renda', () => {
+  const st = s(); st.taxes.type = '1099'; st.contract.mode = 'percent'; st.contract.percent.commission = 100;
+  const t = truck(st, { freight: 20000, miles: 1000 });           // frete de mercado $2.000
+  const d = E.dre([t], st);
+  assert.equal(d.revenue, 2000);
+  assert.equal(d.deductions.se, 282.59);                           // 2000 × 92,35% × 15,3%
+  st.taxes.qbi = false;
+  assert.ok(E.dre([t], st).deductions.federal > d.deductions.federal);
+});
+
+test('jornada: um dia inteiro de folga zera o ciclo (restart de 34h)', () => {
+  const st = s(), mk = (day) => truck(st, { day, drive: 9, hours: 11, miles: 50 });
+  assert.equal(E.hos([1, 2, 3, 4, 5, 6, 7].map(mk), st, { gameDay: 7 }).cycleUsed, 77);
+  const r = E.hos([1, 2, 3, 5, 6, 7].map(mk), st, { gameDay: 7 });
+  assert.equal(r.cycleUsed, 33); assert.equal(r.restartDay, 4);
+});
+
 test('pay lag: semana do dia 8 é paga na sexta seguinte (dia 19)', () => {
   assert.equal(E.paydayFor(8, s()), 19);
 });

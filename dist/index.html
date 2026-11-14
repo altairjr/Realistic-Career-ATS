@@ -58,6 +58,16 @@ button{cursor:pointer}
 .bal b{font-size:22px;font-weight:600}
 
 main{padding-block:16px 24px;display:flex;flex-direction:column;gap:16px}
+@media (max-width:560px){
+  .sign .wrap{padding-block:6px 8px}
+  .sign-inner{padding:6px 10px;gap:4px 10px;border-width:1.5px}
+  .brand{flex:1 1 100%}
+  .brand b{display:none}
+  .bal{margin-left:auto}
+  .bal b{font-size:20px}
+  .mile b{font-size:21px}
+}
+
 h2{font-family:var(--display);font-weight:700;font-size:21px;letter-spacing:.02em;text-transform:uppercase;margin:0;text-wrap:balance}
 h3{font-family:var(--display);font-weight:600;font-size:17px;letter-spacing:.03em;text-transform:uppercase;margin:0}
 .eyebrow{font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
@@ -70,7 +80,7 @@ h3{font-family:var(--display);font-weight:600;font-size:17px;letter-spacing:.03e
 
 .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .stat{padding:12px 14px;min-width:0}
-.stat .v{font-family:var(--display);font-size:26px;font-weight:600;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat .v{font-family:var(--display);font-size:clamp(20px,6.2vw,26px);font-weight:600;line-height:1.15;overflow-wrap:anywhere}
 .stat .s{font-size:12.5px;color:var(--muted)}
 @media (max-width:560px){.stats{grid-template-columns:1fr 1fr}.stats .stat:first-child{grid-column:1/-1}.stats.two .stat:first-child{grid-column:auto}}
 .stats.two{grid-template-columns:1fr 1fr}
@@ -80,6 +90,7 @@ h3{font-family:var(--display);font-weight:600;font-size:17px;letter-spacing:.03e
 .chip.ok{background:var(--ok-bg);color:var(--ok);border-color:transparent}
 .chip.warn{background:var(--amber-bg);color:var(--amber);border-color:transparent}
 .chip.bad{background:var(--red-bg);color:var(--red);border-color:transparent}
+.chip.wrapok{white-space:normal;border-radius:12px}
 .chip.loan{background:transparent;color:var(--shield);border-color:var(--shield)}
 
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:8px;padding:9px 14px;font-weight:600;border:1px solid var(--line);background:var(--panel);min-height:40px}
@@ -174,6 +185,8 @@ details.week .body{padding:12px 14px;display:flex;flex-direction:column;gap:12px
 .hosrow{flex-direction:column;align-items:stretch}
 .hosboxes{display:flex;flex-direction:column;gap:6px}
 .sumtbl td small{display:block}
+.sumtbl .lab-row{display:inline}
+.sumtbl .help-btn{vertical-align:middle;margin-left:6px;width:20px;height:20px;font-size:11.5px}
 .sumtbl{width:100%;border-collapse:collapse}
 .sumtbl td{padding:7px 0;border-bottom:1px solid var(--line)}
 .sumtbl td:last-child{text-align:right;white-space:nowrap}
@@ -218,6 +231,9 @@ nav.tabs button[aria-current="page"] svg{stroke-width:2.3}
 
 .fab{position:fixed;z-index:24;right:max(16px,calc(env(safe-area-inset-right,0px) + 16px));bottom:calc(76px + env(safe-area-inset-bottom,0px));
   border-radius:99px;padding:12px 18px;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+.fab .fab-ic{font-size:20px;line-height:1}
+body.has-fab main{padding-bottom:92px}
+@media (max-width:699px){.fab{width:56px;height:56px;padding:0}.fab .fab-tx{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.fab .fab-ic{font-size:28px}}
 
 /* Modal */
 .ov{position:fixed;inset:0;z-index:50;background:rgba(8,14,11,.55);display:flex;align-items:flex-end;justify-content:center}
@@ -230,7 +246,7 @@ nav.tabs button[aria-current="page"] svg{stroke-width:2.3}
 .seg3 button[aria-selected="true"]{background:var(--sign);color:var(--sign-ink)}
 .sheet .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .sheet .grid .full{grid-column:1/-1}
-@media (max-width:420px){.sheet .grid{grid-template-columns:1fr}}
+@media (max-width:339px){.sheet .grid{grid-template-columns:1fr}}
 .seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:9px;overflow:hidden}
 .seg button{border:0;background:var(--panel-2);padding:9px;font-weight:600;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--sign);color:var(--sign-ink)}
@@ -246,7 +262,7 @@ nav.tabs button[aria-current="page"] svg{stroke-width:2.3}
 .preview b{font-family:var(--display);font-size:22px}
 textarea{width:100%;min-height:140px;border:1px solid var(--line);background:var(--panel-2);border-radius:8px;padding:8px;font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;color:var(--ink)}
 
-.toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(96px + env(safe-area-inset-top,0px));max-width:calc(100% - 32px);text-align:center;z-index:60;background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:99px;font-weight:600;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--toast-top,120px) + env(safe-area-inset-top,0px));max-width:calc(100% - 32px);text-align:center;z-index:60;background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:99px;font-weight:600;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
 .sync{display:inline-flex;align-items:center;gap:6px;font-size:12px}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
 .dot.on{background:var(--ok)} .dot.wait{background:var(--amber)}
@@ -254,6 +270,16 @@ textarea{width:100%;min-height:140px;border:1px solid var(--line);background:var
 .onb{display:flex;flex-direction:column;gap:14px;padding:22px 18px}
 .onb p{margin:0;max-width:60ch}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* PC: navegação no topo, logo abaixo do cabeçalho */
+@media (min-width:900px){
+  body{display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0px)}
+  header.sign{order:0}
+  nav.tabs{order:1;position:sticky;top:calc(var(--hdr-h,96px) + env(safe-area-inset-top,0px));bottom:auto;border-top:0;border-bottom:1px solid var(--line);padding:0;z-index:19}
+  nav.tabs button{flex-direction:row;justify-content:center;gap:8px;font-size:14px;padding:10px 0}
+  nav.tabs button[aria-current="page"]{box-shadow:inset 0 -3px 0 var(--sign)}
+  body > .wrap{order:2;width:100%}
+  .fab{bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+}
 </style>
 
 <header class="sign">
@@ -272,7 +298,7 @@ textarea{width:100%;min-height:140px;border:1px solid var(--line);background:var
 
 <div class="wrap"><main id="view" aria-live="polite"></main></div>
 
-<button type="button" class="btn primary fab" id="fab" hidden>+ Viagem</button>
+<button type="button" class="btn primary fab" id="fab" hidden><span class="fab-ic" aria-hidden="true">+</span><span class="fab-tx">Viagem</span></button>
 
 <nav class="tabs" aria-label="Seções">
   <div class="in">
@@ -300,6 +326,16 @@ const Engine = (() => {
   const r2 = v => Math.round((n(v) + Number.EPSILON) * 100) / 100;
   const sum = (arr, f) => arr.reduce((a, t) => a + (typeof f === 'function' ? f(t) : n(t[f])), 0);
   const clone = o => JSON.parse(JSON.stringify(o));
+  // As cinco classificações de vínculo (fixas: as predefinições dependem delas)
+  const CLASSIFICATIONS = [
+    'Nível 1: Company Driver (Empregado W-2)',
+    'Nível 2: Lease Operator (Arrendatário)',
+    'Nível 3: Owner-Operator (1099)',
+    'Nível 4: Owner-Operator com Autoridade Própria (MC/DOT)',
+    'Nível 5: Dono de Frota (Fleet Owner)'
+  ];
+  // Tipos de operação usados no mercado americano
+  const OPERATIONS = ['Local (Day Cab)', 'Regional', 'Dedicated (cliente fixo)', 'OTR / Long Haul (Sleeper Cab)'];
 
   // Imposto de renda federal 2026 (IRS / Tax Foundation)
   const TAX2026 = {
@@ -323,9 +359,8 @@ const Engine = (() => {
       // Quem paga cada despesa da viagem de caminhão: 'driver' | 'company'
       expenses: { fuel: 'company', tolls: 'company', hotel: 'company', fines: 'driver', damage: 'deductible', deductible: 1000 },
       // Converte o frete inflado do jogo em frete de mercado antes da comissão
-      market: { on: true, mode: 'factor', factor: 0.10, rpm: 2.5, applyCar: false },
+      market: { on: true, mode: 'factor', factor: 0.10, rpm: 2.5 },
       contract: {
-        v: 2,
         mode: 'weekly',
         hours: 50,
         tripBonus: true,
@@ -336,11 +371,11 @@ const Engine = (() => {
         minimum: { on: false, value: 1100 },
         extras:  { layoverOn: true, layoverRate: 150, breakdownOn: true, breakdownRate: 20, tarpOn: false, tarpRate: 75 }
       },
-      taxes: { on: true, type: 'w2', filing: 'single', federal: 'table', flatPct: 12, ficaPct: 7.65, sePct: 15.3, statePct: 0 },
+      taxes: { on: true, type: 'w2', filing: 'single', federal: 'table', flatPct: 12, ficaPct: 7.65, sePct: 15.3, statePct: 0, qbi: true },
       benefits: { healthOn: true, health: 45, k401On: false, k401Pct: 4 },
       perDiem: { on: false, rate: 80 },
       opCosts: { on: false, maintenance: 0.404, tires: 0.05, insurance: 0.10, truckWeekly: 650, otherWeekly: 50 },
-      hos: { on: true, cycle: '70/8', shortHaul: true, radius: 150, penalties: true, resetSafety: true, inspectChance: 25, fine: 1000 },
+      hos: { on: true, cycle: '70/8', shortHaul: true, radius: 150, restart: true, penalties: true, resetSafety: true, inspectChance: 25, fine: 1000 },
       safety: { on: true, weeks: 13, amount: 300 },
       renome: { on: false, pct: 0 },
       borrowed: {
@@ -352,41 +387,15 @@ const Engine = (() => {
         ownOn: true,           // permitir carro próprio
         costPerMile: 0.50      // próprio: manutenção, pneus, seguro e depreciação por milha
       },
-      payroll: { lagOn: true, lagWeeks: 1, paydayWeekday: 4, autoPay: true, deposit: 'takehome' }, // takehome = líquido do contracheque | net = lucro (planilha)
+      payroll: { lagOn: true, lagWeeks: 1, paydayWeekday: 4, autoPay: true },
       loan: { on: false, installment: 0, freq: 'monthly', rate: 0 },   // parcela semanal ou mensal (30 dias), juros ao mês
       bills: { on: true, weekday: 0 },                                  // contas fixas cobradas pelo calendário, mesmo sem salário
       cities: ['Reno', 'Truckee', 'Carson City', 'Tonopah'],
-      lists: {
-        classification: [
-          'Nível 1: Company Driver (Empregado W-2)',
-          'Nível 2: Lease Operator (Arrendatário)',
-          'Nível 3: Owner-Operator (1099)',
-          'Nível 4: Owner-Operator com Autoridade Própria (MC/DOT)',
-          'Nível 5: Dono de Frota (Fleet Owner)'
-        ],                                                   // fixa: as predefinições dependem dela
-        operation: [
-          'Local/Dedicated',
-          'Local / Regional (Day Cab)',
-          'OTR / Longa Distância (Sleeper Cab)'
-        ]
-      }
+      lists: { operation: OPERATIONS.slice() }
     };
   }
 
-  function migrate(saved) {
-    const c = saved && saved.contract;
-    if (!c || c.v >= 2) return saved;
-    const on = c.commissionOn !== false, pct = c.commission ?? 5;
-    return { ...saved, contract: {
-      v: 2, mode: c.mode === 'none' ? 'percent' : (c.mode || 'weekly'), hours: c.hours ?? 50, tripBonus: c.tripBonus !== false,
-      weekly: { value: c.weekly ?? 1300, commissionOn: on, commission: pct },
-      hourly: { rate: c.hourly ?? 26, commissionOn: on, commission: pct },
-      cpm: { rate: c.cpm ?? 0.55 },
-      percent: { commission: c.mode === 'none' ? pct : 25 }
-    } };
-  }
   function mergeDefaults(saved) {
-    saved = migrate(saved);
     const walk = (base, over) => {
       if (!over || typeof over !== 'object' || Array.isArray(over)) return over === undefined ? base : over;
       const out = Array.isArray(base) ? [] : { ...base };
@@ -414,26 +423,21 @@ const Engine = (() => {
     if (c.includes('owner') || c.includes('1099')) return 'owner';
     return 'w2';
   }
-  // Muda só as regras ligadas ao vínculo; valores de refeição, moradia, cidades etc. ficam.
+  // Aplica as condições típicas do vínculo a um conjunto de condições de contrato
+  // (contract, expenses, benefits, perDiem, opCosts, safety). O tipo fiscal sai da classificação.
   function applyPreset(s, key, { otr = false } = {}) {
     const all = v => ({ fuel: v, tolls: v, hotel: v, fines: 'driver', damage: v === 'driver' ? 'driver' : 'deductible', deductible: s.expenses.deductible || 1000 });
-    s.market.on = true; s.taxes.on = true; s.safety.on = key !== 'authority' && key !== 'fleet'; s.payroll.deposit = 'takehome';
-    if (key === 'w2') {
-      s.expenses = all('company'); s.expenses.fines = 'driver'; s.expenses.damage = 'deductible';
-      s.taxes.type = 'w2'; s.benefits.healthOn = true; s.opCosts.on = false;
-      s.perDiem.on = !!otr;
-      return s;
-    }
+    s.safety.on = key !== 'authority' && key !== 'fleet';
+    s.benefits.healthOn = true;
+    s.perDiem.on = !!otr;
+    if (key === 'w2') { s.expenses = all('company'); s.opCosts.on = false; return s; }
     // Lease / owner-operator / autoridade / frota: paga tudo, recebe % do frete
-    s.expenses = all('driver');
-    s.taxes.type = '1099'; s.benefits.healthOn = true; s.perDiem.on = !!otr; s.opCosts.on = true;
-    s.contract.mode = 'percent';
-    if (key === 'lease')     { s.contract.percent.commission = 70;  s.opCosts.truckWeekly = 650; s.opCosts.insurance = 0.08; s.opCosts.otherWeekly = 60; }
-    if (key === 'owner')     { s.contract.percent.commission = 75;  s.opCosts.truckWeekly = 600; s.opCosts.insurance = 0.10; s.opCosts.otherWeekly = 80; }
-    if (key === 'authority') { s.contract.percent.commission = 100; s.opCosts.truckWeekly = 600; s.opCosts.insurance = 0.16; s.opCosts.otherWeekly = 180; }
-    if (key === 'fleet')     { s.contract.percent.commission = 100; s.opCosts.truckWeekly = 600; s.opCosts.insurance = 0.16; s.opCosts.otherWeekly = 250; }
+    s.expenses = all('driver'); s.opCosts.on = true; s.contract.mode = 'percent';
+    const P = { lease: [70, 650, 0.08, 60], owner: [75, 600, 0.10, 80], authority: [100, 600, 0.16, 180], fleet: [100, 600, 0.16, 250] }[key];
+    if (P) { s.contract.percent.commission = P[0]; s.opCosts.truckWeekly = P[1]; s.opCosts.insurance = P[2]; s.opCosts.otherWeekly = P[3]; }
     return s;
   }
+  const taxTypeFor = classification => presetKeyFor(classification) === 'w2' ? 'w2' : '1099';
 
   /* ---------- Calendário ---------- */
   const weekdayIdx = (day, s) => (((day - 1 + n(s.day1Weekday)) % 7) + 7) % 7;
@@ -448,7 +452,7 @@ const Engine = (() => {
     if (!_cache.has(t.contract)) _cache.set(t.contract, mergeDefaults({ contract: t.contract }).contract);
     return _cache.get(t.contract);
   }
-  // Regra do carro gravada na viagem. Sem 'mode' = fórmula antiga da planilha (% do frete − todas as despesas).
+  // Regra do carro gravada na viagem; sem regra gravada, usa a atual (emprestado)
   const carRuleOf = (t, s) => (t && t.car && t.car.mode) ? t.car : carSnapshot(s, 'borrowed');
   function carSnapshot(s, mode = 'borrowed') {
     const b = s.borrowed;
@@ -528,11 +532,13 @@ const Engine = (() => {
     p.total = r2(p.base + p.detention + p.stops + p.layover + p.breakdown + p.tarp + p.commission + p.bonus);
     return p;
   }
-  const tripCommission = (t, s) => tripPay(t, s).total;
 
-  function annualTax(income, filing) {
+  // income: renda anual antes da dedução padrão. qbi: renda qualificada do negócio (1099);
+  // a dedução é 20% do menor entre a QBI e a renda tributável (Section 199A, permanente desde 2025).
+  function annualTax(income, filing, { qbi = 0 } = {}) {
     const T = TAX2026[filing] || TAX2026.single;
-    const taxable = Math.max(0, income - T.std);
+    let taxable = Math.max(0, income - T.std);
+    if (qbi > 0) taxable -= 0.2 * Math.min(qbi, taxable);
     let tax = 0, prev = 0;
     for (const [cap, rate] of T.br) { if (taxable <= prev) break; tax += (Math.min(taxable, cap) - prev) * rate; prev = cap; }
     return tax;
@@ -618,18 +624,21 @@ const Engine = (() => {
     const ded = { federal: 0, fica: 0, se: 0, state: 0, health: 0, k401: 0 };
     ded.health = B.healthOn ? n(B.health) : 0;
     ded.k401 = B.k401On ? revenue * n(B.k401Pct) / 100 : 0;
-    let taxable = 0;
+    let taxable = 0, qbi = 0;
     if (T.on && revenue > 0) {
       if (T.type === '1099') {
+        // Autônomo (Schedule C): o self-employment tax incide sobre o lucro do negócio.
+        // Plano de saúde e aposentadoria reduzem só o imposto de renda, não o SE tax.
         const business = v.fuel + v.tolls + v.damage + op.total;
-        const netSE = Math.max(0, revenue - business - perDiem * 0.8 - ded.health - ded.k401);
+        const netSE = Math.max(0, revenue - business - perDiem * 0.8);
         ded.se = netSE * 0.9235 * n(T.sePct) / 100;
-        taxable = Math.max(0, netSE - ded.se / 2);
+        taxable = Math.max(0, netSE - ded.se / 2 - ded.health - ded.k401);
+        qbi = T.qbi !== false ? taxable * 52 : 0;
       } else {
         ded.fica = Math.max(0, revenue - perDiem - ded.health) * n(T.ficaPct) / 100;
         taxable = Math.max(0, revenue - perDiem - ded.health - ded.k401);
       }
-      ded.federal = T.federal === 'flat' ? taxable * n(T.flatPct) / 100 : annualTax(taxable * 52, T.filing) / 52;
+      ded.federal = T.federal === 'flat' ? taxable * n(T.flatPct) / 100 : annualTax(taxable * 52, T.filing, { qbi }) / 52;
       ded.state = taxable * n(T.statePct) / 100;
     }
     for (const key in ded) ded[key] = r2(ded[key]);
@@ -677,20 +686,25 @@ const Engine = (() => {
       return { day, ...d, drive: r2(d.drive), duty: r2(d.duty), exempt, alerts };
     });
     const [limit, window] = H.cycle === '60/7' ? [60, 7] : [70, 8];
-    let cycleUsed = 0;
-    for (let d = gameDay - window + 1; d <= gameDay; d++) if (byDay[d]) cycleUsed += byDay[d].duty;
+    // Soma do ciclo: volta dia a dia até o limite da janela. Um dia inteiro sem viagem de caminhão
+    // equivale ao restart de 34 horas de folga e zera a contagem (regra opcional da FMCSA).
+    let cycleUsed = 0, restartDay = null;
+    for (let d = gameDay; d > gameDay - window && d >= 1; d--) {
+      if (byDay[d]) cycleUsed += byDay[d].duty;
+      else if (H.restart !== false && d < gameDay) { restartDay = d; break; }
+    }
     cycleUsed = r2(cycleUsed);
-    return { rows, limit, window, cycleUsed, cycleLeft: r2(Math.max(0, limit - cycleUsed)), over: cycleUsed > limit };
+    return { rows, limit, window, cycleUsed, cycleLeft: r2(Math.max(0, limit - cycleUsed)), over: cycleUsed > limit, restartDay };
   }
 
-  return { WEEKDAYS, WEEKDAYS_FULL, STATUSES, PRESETS, TAX2026, n, r2, defaults, mergeDefaults, migrate,
-    presetKeyFor, applyPreset, weekdayIdx, weekStartOf, dayLabel, paydayFor,
+  return { WEEKDAYS, WEEKDAYS_FULL, STATUSES, CLASSIFICATIONS, OPERATIONS, PRESETS, TAX2026, n, r2, defaults, mergeDefaults,
+    presetKeyFor, taxTypeFor, applyPreset, weekdayIdx, weekStartOf, dayLabel, paydayFor,
     contractOf, carRuleOf, carSnapshot, carBreakdown, snapshotFor, rulesSnapshot, marketFreight, tripCosts, borrowedValue,
-    commissionRule, tripPay, tripCommission, annualTax, dre, hos };
+    commissionRule, tripPay, annualTax, dre, hos };
 })();
 
 
-/* ===== App — Carreira Realista ATS ===== */
+/* Núcleo: atalhos, formatação e variáveis globais do app */
 const E = Engine;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -713,7 +727,7 @@ function clearLocal() { try { localStorage.removeItem(LS_KEY); } catch (e) {} }
 
 const mainRef = () => store.db.doc(`data/users/${store.uid}/app`);
 const weeksCol = () => mainRef().collection('weeks');
-let writeTimer = null, writing = false, dirty = false, lastWriteRev = 0;
+let writeTimer = null, writing = false, dirty = false, lastWriteRev = 0, retries = 0;
 
 function persist() {
   saveLocal();
@@ -725,20 +739,25 @@ async function flush() {
   if (writing || !dirty || !store.db || !S) return;
   writing = true; dirty = false;
   const body = clone(S); body._by = CLIENT; lastWriteRev = body._rev || 0;
-  try { await mainRef().set(body); setSync('on'); }
-  catch (e) { handleDbError(e); }
+  try { await mainRef().set(body); retries = 0; setSync('on'); }
+  catch (e) { handleDbError(e, true); }
   finally { writing = false; if (dirty) flush(); }
 }
 async function saveWeekRemote(w) { if (!store.db) return; try { await weeksCol().doc(w.id).set(clone(w)); } catch (e) { handleDbError(e); } }
 async function deleteWeekRemote(id) { if (!store.db) return; try { await weeksCol().doc(id).delete(); } catch (e) { handleDbError(e); } }
-function handleDbError(e) {
-  if (e && e.code === 'quota_exceeded') toast('Armazenamento da conta cheio. Exporte e apague semanas antigas.');
-  if (e && (e.code === 'revoked' || e.code === 'invalid_argument')) { store.db = null; setSync('local'); }
-  else setSync('err');
+// Erros do armazenamento na conta. A cópia local continua valendo em todos os casos.
+function handleDbError(e, wasWrite) {
+  const code = e && e.code;
+  if (code === 'quota_exceeded') { setSync('full'); toast('Armazenamento da conta cheio. Exporte um backup e exclua semanas antigas do Histórico.'); return; }
+  if (code === 'invalid_argument' || code === 'transform_error') { setSync('big'); toast('Dados grandes demais para sincronizar. Feche a semana ou exporte um backup em Ajustes.'); return; }
+  if (['revoked', 'not_granted', 'capability_disabled', 'capability_removed'].includes(code)) { store.db = null; setSync('local'); return; }
+  setSync('err');
+  // falha passageira: tenta gravar de novo, no máximo 3 vezes
+  if (wasWrite && retries < 3) { retries++; clearTimeout(writeTimer); writeTimer = setTimeout(() => { dirty = true; flush(); }, 3000 * retries); }
 }
 function setSync(st) { store.status = st; const el = document.getElementById('syncState'); if (el) el.outerHTML = syncBadge(); }
 function syncBadge() {
-  const m = { on: ['on', 'Sincronizado na sua conta'], wait: ['wait', 'Salvando…'], local: ['', 'Salvo só neste navegador'], err: ['wait', 'Sem conexão · cópia local'], loading: ['wait', 'Conectando…'] }[store.status] || ['', ''];
+  const m = { on: ['on', 'Sincronizado na sua conta'], wait: ['wait', 'Salvando…'], local: ['', 'Salvo só neste navegador'], err: ['wait', 'Sem conexão · cópia local'], loading: ['wait', 'Conectando…'], big: ['wait', 'Sem sincronizar: dados grandes demais'], full: ['wait', 'Sem sincronizar: armazenamento cheio'] }[store.status] || ['', ''];
   return `<span class="sync" id="syncState"><span class="dot ${m[0]}"></span>${m[1]}</span>`;
 }
 
@@ -775,95 +794,122 @@ async function connectDb() {
   } catch (e) { setSync('local'); }
 }
 
-/* ---------- Estado ---------- */
-/* ---------- Carreira: empresas e contratos ---------- */
-const CLASSIFICATIONS = E.defaults().lists.classification;
-const taxTypeFor = cls => E.presetKeyFor(cls) === 'w2' ? 'w2' : '1099';
-function termsFrom(s) {
-  return { contract: clone(s.contract), expenses: clone(s.expenses), benefits: clone(s.benefits), perDiem: clone(s.perDiem), opCosts: clone(s.opCosts),
-    renome: { on: !!(s.renome && s.renome.on), perLevel: E.n(s.renome && (s.renome.perLevel ?? s.renome.pct)) }, safety: clone(s.safety) };
-}
+/* ---------- Estado: carreira, empresas e contratos ---------- */
+const SCHEMA = 3;                 // versão do formato dos dados salvos (ver docs/esquema-de-dados.md)
+const KEEP_DAYS = 84;             // extrato, holerites e infrações ficam 12 semanas no documento principal
+const CLASSIFICATIONS = E.CLASSIFICATIONS;
+const PRESET_KEYS = ['w2', 'lease', 'owner', 'authority', 'fleet'];
+const TERM_KEYS = ['contract', 'expenses', 'benefits', 'perDiem', 'opCosts', 'safety', 'renome'];   // vivem no contrato, não nos ajustes
+const taxTypeFor = E.taxTypeFor;
+const opIsLocal = op => /local|day cab/i.test(op || '');
+const opIsOtr = op => /otr|sleeper|long haul|longa/i.test(op || '');
+// Nomes de operação de versões antigas → padrão americano
+const OP_RENAME = { 'Local/Dedicated': 'Local (Day Cab)', 'Local / Regional (Day Cab)': 'Regional', 'OTR / Longa Distância (Sleeper Cab)': 'OTR / Long Haul (Sleeper Cab)' };
+
 function normTerms(tm) {
   const m = E.mergeDefaults({ contract: tm.contract, expenses: tm.expenses, benefits: tm.benefits, perDiem: tm.perDiem, opCosts: tm.opCosts, safety: tm.safety });
   const r = tm.renome || {};
   return { contract: m.contract, expenses: m.expenses, benefits: m.benefits, perDiem: m.perDiem, opCosts: m.opCosts, safety: m.safety,
     renome: { on: !!r.on, perLevel: E.n(r.perLevel ?? r.pct) } };
 }
+// Condições padrão de uma classificação. Com `base`, parte das condições atuais do contrato.
+function presetTermsFor(key, base, otr = false) {
+  const d = E.defaults(), src = base || d;
+  const t = clone({ contract: src.contract, expenses: src.expenses, benefits: src.benefits, perDiem: src.perDiem, opCosts: src.opCosts, safety: src.safety });
+  E.applyPreset(t, key, { otr });
+  return normTerms({ ...t, renome: base ? base.renome : { on: false, perLevel: 0 } });
+}
 const activeContract = (st = S) => st.contracts.find(c => c.id === st.currentContractId) || st.contracts[st.contracts.length - 1];
 const companyOf = (c, st = S) => st.companies.find(x => x.id === (c && c.companyId));
 const companyName = (c, st = S) => (companyOf(c, st) || {}).name || 'Sem empresa';
 
-// Regras efetivas = ajustes gerais + condições do contrato ativo.
-// Tipo fiscal sai da classificação.
+// Regras efetivas = ajustes gerais + condições do contrato ativo. O tipo fiscal sai da classificação.
 function effSettings(st = S) {
-  const c = activeContract(st);
-  if (!c) return st.settings;
-  const T = c.terms, G = st.settings;
-  const s = { ...G,
+  const c = activeContract(st), T = c.terms, G = st.settings;
+  return { ...G,
     contract: { ...T.contract, tripBonus: G.tripBonus !== false },
-    expenses: T.expenses, market: G.market, benefits: T.benefits, perDiem: T.perDiem, opCosts: T.opCosts, safety: T.safety,
+    expenses: T.expenses, benefits: T.benefits, perDiem: T.perDiem, opCosts: T.opCosts, safety: T.safety,
     renome: { on: !!T.renome.on, pct: E.n(T.renome.perLevel) * Math.max(1, E.n(c.renomeLevel) || 1) },
-    taxes: { ...G.taxes, on: true, type: taxTypeFor(c.classification) },
-    payroll: { ...G.payroll, deposit: 'takehome' }
+    taxes: { ...G.taxes, on: true, type: taxTypeFor(c.classification) }
   };
-  return s;
 }
 const SS = () => effSettings(S);
 
+// Cria uma carreira nova: um motorista, uma empresa e um contrato com as condições padrão do vínculo
+function newCareer(o = {}) {
+  const settings = E.defaults();
+  if (o.day1 != null) settings.day1Weekday = o.day1;
+  const coId = uid(), ctId = uid(), key = PRESET_KEYS.includes(o.clsKey) ? o.clsKey : 'w2';
+  const operation = o.operation || E.OPERATIONS[0], gameDay = Math.max(1, parseInt(o.gameDay) || 1);
+  return normalize({ v: SCHEMA, settings, gameDay,
+    profile: { name: o.name || '', nationality: o.nationality || '', level: o.level || 1, experience: 'grad', visa: 'unset' },
+    bank: { opening: E.r2(o.opening || 0), archived: 0, loanTotal: 0 },
+    companies: [{ id: coId, name: o.company || 'Empresa contratante', hq: o.hq || '', dot: '', notes: '' }],
+    contracts: [{ id: ctId, companyId: coId, classification: CLASSIFICATIONS[PRESET_KEYS.indexOf(key)], operation, startDay: o.startDay || 1, endDay: null,
+      truck: '', trailer: '', renomeLevel: 1, terms: presetTermsFor(key, null, opIsOtr(operation)) }],
+    currentContractId: ctId,
+    week: { start: E.weekStartOf(gameDay, settings), trips: [] }, payroll: [], ledger: [],
+    career: { billedThrough: o.billedThrough ?? gameDay - 1, startDay: gameDay }
+  });
+}
+
+// Completa e confere o estado carregado (do navegador, da conta, de um backup ou de uma planilha)
 function normalize(st) {
-  const firstV6 = !(st.settings && st.settings._v6);
-  const rawCar = st.settings && st.settings.borrowed;
-  const oldCar = !!(rawCar && rawCar.factor === undefined && rawCar.pct !== undefined);
+  const before = st.v || 0;
   st.settings = E.mergeDefaults(st.settings);
-  st.profile = st.profile || {};
-  st.bank = Object.assign({ opening: 0, loanTotal: 0 }, st.bank || {});
-  st.career = Object.assign({ safetyStreak: 0, k401: 0, startDay: 1, loanNext: null }, st.career || {});
-  if (st.career.billedThrough === undefined) st.career.billedThrough = Math.max(1, parseInt(st.gameDay) || 1); // sem cobrança retroativa
+  st.profile = Object.assign({ name: '', nationality: '', level: 1, experience: 'grad', visa: 'unset' }, st.profile || {});
+  st.bank = Object.assign({ opening: 0, archived: 0, loanTotal: 0 }, st.bank || {});
+  st.gameDay = Math.max(1, parseInt(st.gameDay) || 1);
+  st.career = Object.assign({ safetyStreak: 0, k401: 0, startDay: 1, loanNext: null, violations: [] }, st.career || {});
+  if (st.career.billedThrough === undefined) st.career.billedThrough = st.gameDay;   // sem cobrança retroativa
   st.week = st.week || { start: 1, trips: [] };
   st.week.trips = st.week.trips || [];
   st.payroll = st.payroll || [];
   st.ledger = st.ledger || [];
-  st.gameDay = Math.max(1, parseInt(st.gameDay) || 1);
   const L = st.settings.lists, P = st.profile;
-  L.classification = CLASSIFICATIONS.slice();
-  const fixCls = cls => CLASSIFICATIONS.includes(cls) ? cls : CLASSIFICATIONS[['w2', 'lease', 'owner', 'authority', 'fleet'].indexOf(E.presetKeyFor(cls))] || CLASSIFICATIONS[0];
-  // Migração v5: ficha antiga (empresa e contrato dentro do perfil) → cadastro de empresa + contrato
-  if (!Array.isArray(st.companies) || !Array.isArray(st.contracts) || !st.contracts.length) {
-    const co = { id: uid(), name: P.company || 'Empresa contratante', hq: P.garage || '', dot: '', notes: '' };
-    st.companies = Array.isArray(st.companies) && st.companies.length ? st.companies : [co];
-    const ct = { id: uid(), companyId: st.companies[0].id, classification: fixCls(P.classification), operation: P.operation || L.operation[0],
-      startDay: 1, endDay: null, truck: P.truck || '', trailer: P.trailer || '', renomeLevel: P.renomeLevel || 1, terms: termsFrom(st.settings) };
-    st.contracts = [ct]; st.currentContractId = ct.id;
+  L.operation = [...new Set((L.operation || []).map(o => OP_RENAME[o] || o))];
+  if (before < 3) E.OPERATIONS.forEach(o => { if (!L.operation.includes(o)) L.operation.push(o); });
+  if (!L.operation.length) L.operation = E.OPERATIONS.slice();
+  const fixCls = cls => CLASSIFICATIONS.includes(cls) ? cls : CLASSIFICATIONS[PRESET_KEYS.indexOf(E.presetKeyFor(cls))] || CLASSIFICATIONS[0];
+  // Garante uma empresa e um contrato (dados muito antigos guardavam isso na ficha do motorista)
+  if (!Array.isArray(st.companies) || !st.companies.length) st.companies = [{ id: uid(), name: P.company || 'Empresa contratante', hq: P.garage || '', dot: '', notes: '' }];
+  if (!Array.isArray(st.contracts) || !st.contracts.length) {
+    st.contracts = [{ id: uid(), companyId: st.companies[0].id, classification: fixCls(P.classification), operation: P.operation || L.operation[0], startDay: 1, endDay: null,
+      truck: P.truck || '', trailer: P.trailer || '', renomeLevel: P.renomeLevel || 1, terms: null }];
   }
-  ['company', 'garage', 'classification', 'operation', 'truck', 'trailer', 'renomeLevel', 'payForm'].forEach(k => delete P[k]);
-  st.companies.forEach(co => delete co.kind);
-  if (!P.experience) P.experience = 'grad';
-  if (!P.visa) P.visa = 'unset';
   for (const c of st.contracts) {
-    const old = c.terms || termsFrom(st.settings);
-    if (!old.safety) old.safety = clone(st.settings.safety);
-    if (firstV6 && c.id === st.currentContractId) {
-      // Migração v6: frete de mercado e bônus de caminhão passam a ser regras gerais
-      if (old.market) st.settings.market = E.mergeDefaults({ market: old.market }).market;
-      if (old.contract && old.contract.tripBonus !== undefined) st.settings.tripBonus = old.contract.tripBonus !== false;
-    }
-    c.terms = normTerms(old);
     c.classification = fixCls(c.classification);
-    if (c.operation && !L.operation.includes(c.operation)) L.operation.push(c.operation);
+    c.operation = OP_RENAME[c.operation] || c.operation || L.operation[0];
+    if (!L.operation.includes(c.operation)) L.operation.push(c.operation);
+    c.terms = normTerms(c.terms || presetTermsFor(E.presetKeyFor(c.classification), null, opIsOtr(c.operation)));
   }
-  st.settings._v6 = true;
-  if (oldCar) st.settings.borrowed.pct = 35;   // v7: comissão do carro emprestado no novo cálculo
-  delete st.settings.tripCosts; delete st.settings.borrowed.sheetPct; delete st.settings.payroll.deposit;
   if (!st.contracts.find(c => c.id === st.currentContractId)) st.currentContractId = st.contracts[st.contracts.length - 1].id;
+  // Campos de versões antigas que não existem mais
+  ['company', 'garage', 'classification', 'operation', 'truck', 'trailer', 'renomeLevel', 'payForm'].forEach(k => delete P[k]);
+  TERM_KEYS.forEach(k => delete st.settings[k]);
+  ['_v6', 'tripCosts'].forEach(k => delete st.settings[k]);
+  delete L.classification; delete st.settings.payroll.deposit; delete st.settings.market.applyCar; delete st.settings.borrowed.sheetPct; delete st.settings.taxes.type;
+  st.companies.forEach(co => delete co.kind);
+  // Viagens da semana em aberto sem regras gravadas recebem as regras atuais
   const eff = effSettings(st);
   for (const t of st.week.trips) {
-    // Viagens da semana em aberto sem regras gravadas passam para o cálculo atual
-    if (t.type === 'borrowed' && !(t.car && t.car.mode)) t.car = E.carSnapshot(eff, 'borrowed');
-    if (t.type !== 'borrowed' && !t.contract) Object.assign(t, E.snapshotFor('company', eff));
-    if (t.type !== 'borrowed' && !t.rules) t.rules = E.rulesSnapshot(eff);
-    if (t.type !== 'borrowed' && !t.contractId) t.contractId = st.currentContractId;
+    if (t.type === 'borrowed') { if (!(t.car && t.car.mode)) t.car = E.carSnapshot(eff, 'borrowed'); continue; }
+    if (!t.contract) Object.assign(t, E.snapshotFor('company', eff));
+    if (!t.rules) t.rules = E.rulesSnapshot(eff);
+    if (!t.contractId) t.contractId = st.currentContractId;
   }
+  st.v = SCHEMA;
   return st;
+}
+// Mantém o documento principal pequeno: lançamentos antigos viram um saldo acumulado
+function compact(st) {
+  const cut = st.gameDay - KEEP_DAYS;
+  if (cut < 1) return;
+  let moved = 0;
+  st.ledger = st.ledger.filter(e => { if (e.locked && e.day < cut) { moved += E.n(e.amount); return false; } return true; });
+  st.bank.archived = E.r2(E.n(st.bank.archived) + moved);
+  st.payroll = st.payroll.filter(p => !(p.status === 'paid' && E.n(p.paidDay) < cut));
+  st.career.violations = (st.career.violations || []).filter(v => v.day >= cut);
 }
 const EXPERIENCE = [
   ['grad', 'Recém-formado (0–6 meses)', 0.38, 0.45],
@@ -880,15 +926,15 @@ const VISAS = [
   ['e2', 'Visto E-2 (CDL não-domiciliada)'],
   ['other', 'Outro visto ou sem status']
 ];
-const isLocalOp = () => /local|day cab/i.test((activeContract() || {}).operation || '');
-const isOtrOp = () => /otr|sleeper|longa/i.test((activeContract() || {}).operation || '');
+const isLocalOp = () => opIsLocal((activeContract() || {}).operation);
+const isOtrOp = () => opIsOtr((activeContract() || {}).operation);
 const payFormShort = T => {
   const k = T.contract, M = k[k.mode] || {};
   return ({ weekly: `Fixo ${fmt(M.value)}/semana${M.commissionOn ? ` + ${fmtN(M.commission)}%` : ''}`, hourly: `${fmt(M.rate)}/hora${M.commissionOn ? ` + ${fmtN(M.commission)}%` : ''}`, cpm: `${fmt(M.rate)}/milha`, percent: `${fmtN(M.commission)}% do frete` })[k.mode] || '';
 };
 const contractPeriod = c => `Dia ${c.startDay} – ${c.endDay ? 'dia ' + c.endDay : 'atual'}`;
 const shortCls = cls => E.PRESETS[E.presetKeyFor(cls)];
-const balance = st => E.r2(E.n(st.bank.opening) + st.ledger.reduce((a, e) => a + E.n(e.amount), 0));
+const balance = st => E.r2(E.n(st.bank.opening) + E.n(st.bank.archived) + st.ledger.reduce((a, e) => a + E.n(e.amount), 0));
 const pendingPay = st => E.r2(st.payroll.filter(p => p.status !== 'paid').reduce((a, p) => a + E.n(p.amount), 0));
 const weekLabel = start => `Dia ${start}–${start + 6}`;
 const dayFull = d => `Dia ${d} · ${E.dayLabel(d, S.settings)}`;
@@ -914,8 +960,10 @@ function syncBorrowedLedger(st) {
 function payEntry(st, p, day) {
   if (p.status === 'paid') return;
   p.status = 'paid'; p.paidDay = day;
-  st.ledger.push({ id: uid(), ref: 'pay:' + p.id, day, desc: `Holerite · semana ${weekLabel(p.weekStart).toLowerCase()}`, amount: p.amount, locked: true });
+  const label = p.breakdown && p.breakdown.tax === '1099' ? 'Acerto (settlement)' : 'Holerite';
+  st.ledger.push({ id: uid(), ref: 'pay:' + p.id, day, desc: `${label} · semana ${weekLabel(p.weekStart).toLowerCase()}`, amount: p.amount, locked: true });
 }
+
 /* ---------- Contas fixas e empréstimo pelo calendário ---------- */
 const loanPeriod = s => s.loan.freq === 'weekly' ? 7 : 30;
 function payLoan(st, s, d) {
@@ -959,6 +1007,40 @@ function loanForecast(st) {
   return `Faltam ${n} parcela${n === 1 ? '' : 's'}; a última vence por volta do dia ${d - loanPeriod(s)}.`;
 }
 
+// Infrações de jornada da semana em aberto (só alertas de nível 'bad' + ciclo estourado)
+function weekViolations() {
+  const s = SS(); if (!s.hos.on) return [];
+  const trucks = S.week.trips.filter(t => t.type !== 'borrowed');
+  if (!trucks.length) return [];
+  const days = [...new Set(trucks.map(t => t.day))].sort((a, b) => a - b);
+  const recent = [...H.slice(-2).flatMap(w => w.trips || []), ...S.week.trips];
+  const rep = E.hos(recent, s, { local: isLocalOp(), gameDay: days[days.length - 1], days });
+  const v = [];
+  rep.rows.forEach(r => r.alerts.filter(a => a.level === 'bad').forEach(a => v.push({ day: r.day, code: a.code, text: a.text })));
+  const over = days.map(d => ({ d, r: E.hos(recent, s, { gameDay: d, days: [] }) })).find(x => x.r.over);
+  if (over) v.push({ day: over.d, code: 'cycle', text: `Ciclo de ${over.r.limit}h estourado (${fmtN(over.r.cycleUsed)}h)` });
+  return v;
+}
+const recentViolations = (st = S) => (st.career.violations || []).filter(v => v.day > st.gameDay - 56);
+
+function weekClosePlan() {
+  const s = SS();
+  const hasTruck = S.week.trips.some(t => t.type !== 'borrowed');
+  const viol = weekViolations();
+  const hosHit = s.hos.penalties && s.hos.resetSafety && viol.length > 0;
+  const clean = weekDre().clean && !hosHit;
+  const streak = S.career.safetyStreak || 0;
+  let newStreak = streak, safety = 0;
+  if (s.safety.on && hasTruck) {
+    if (clean) { newStreak = streak + 1; if (newStreak % Math.max(1, E.n(s.safety.weeks)) === 0) safety = E.n(s.safety.amount); }
+    else newStreak = 0;
+  }
+  const d = weekDre({ safety });
+  // parcelas do empréstimo e contas já cobradas pelo calendário não saem de novo no fechamento
+  const living = E.r2(Math.max(0, d.variable.total + d.opCosts.total + d.fixed.total - d.fixed.loan - billedThisWeek(S)));
+  return { d, safety, newStreak, living, viol, hosHit };
+}
+
 function autoPay(st) {
   if (!st.settings.payroll.autoPay) return;
   st.payroll.filter(p => p.status !== 'paid' && p.payday <= st.gameDay).forEach(p => payEntry(st, p, p.payday));
@@ -975,12 +1057,7 @@ function commit(fn, { view = true } = {}) {
   view ? render() : renderHeader();
 }
 
-/* ---------- Dados iniciais ---------- */
-function blankState() {
-  const st = normalize({ v: 1, settings: E.defaults(), gameDay: 1, profile: { name: '', nationality: '', level: 1, company: '', garage: '', renomeLevel: 1, classification: 'Nível 1: Company Driver (Empregado W-2)', operation: 'Local/Dedicated' }, bank: { opening: 0, loanTotal: 0 }, week: { start: 1, trips: [] }, career: { billedThrough: 0, startDay: 1 } });
-  st._rev = Date.now();
-  return st;
-}
+/* ---------- Troca completa dos dados (nova carreira, importação) ---------- */
 async function replaceAll(state, history) {
   const old = H.map(w => w.id);
   S = normalize(state); H = (history || []).slice().sort((a, b) => a.start - b.start);
@@ -1006,7 +1083,8 @@ function renderHeader() {
 function render() {
   renderHeader();
   document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === tab ? 'page' : 'false'));
-  $('#fab').hidden = !S || !(tab === 'painel' || tab === 'diario');
+  const fabOn = !!S && (tab === 'painel' || tab === 'diario');
+  $('#fab').hidden = !fabOn; document.body.classList.toggle('has-fab', fabOn);
   const v = $('#view');
   if (!S) { v.innerHTML = onboarding(); return; }
   v.innerHTML = ({ painel, diario, holerite, historico, ajustes, carreira })[tab]();
@@ -1016,9 +1094,9 @@ function onboarding() {
   return `<section class="panel onb">
     <div class="eyebrow">Primeiro acesso</div>
     <h2>Monte sua carreira no American</h2>
-    <p>Diário de bordo, contrato com a empresa, DRE da semana, fechamento com pay lag e holerite do bruto ao líquido, com regras do mercado americano em 2026. Tudo pode ser ajustado.</p>
-    <div class="row"><button class="btn primary" data-act="start-blank">Começar do zero</button></div>
-    <p class="muted" style="font-size:13px;margin:0">Já tem seus dados numa planilha ou num backup? Comece do zero e depois use Ajustes › Dados e sincronização › Importar planilha (ou Importar JSON). ${syncBadge()}</p>
+    <p>Diário de bordo, contrato com a empresa, resultado da semana, fechamento com pay lag e holerite do bruto ao líquido, com regras do mercado americano em 2026. Tudo pode ser ajustado depois.</p>
+    <div class="row"><button class="btn primary" data-act="start-blank">Criar carreira</button></div>
+    <p class="muted" style="font-size:13px;margin:0">Já tem seus dados numa planilha ou num backup? Crie a carreira e depois use Ajustes › Dados e sincronização › Importar planilha (ou Importar JSON). ${syncBadge()}</p>
   </section>`;
 }
 
@@ -1035,18 +1113,17 @@ function painel() {
   const ready = S.payroll.filter(p => p.status !== 'paid' && p.payday <= S.gameDay);
   const readyB = ready.length ? `<div class="banner"><div><b>${ready.length === 1 ? 'Um holerite está' : ready.length + ' holerites estão'} disponível${ready.length === 1 ? '' : 'is'}.</b><div class="muted" style="font-size:13.5px">${fmt(ready.reduce((a, p) => a + p.amount, 0))} para depositar no saldo.</div></div><button class="btn primary" data-act="pay-ready">Receber</button></div>` : '';
   const visaB = S.profile.visa === 'other' ? (h => `<div class="banner"><div style="flex:1;min-width:0"><div class="lab-row" style="justify-content:flex-start"><b>CDL não-domiciliada restrita.</b>${h.btn}</div><div class="muted" style="font-size:13.5px">Desde 15/03/2026, a FMCSA só emite CDL não-domiciliada para vistos H-2A, H-2B e E-2. Ajuste o status em Carreira › Motorista.</div>${h.box}</div></div>`)(bh('ui.visto', 'CDL')) : '';
-  const takehome = s.payroll.deposit === 'takehome';
   return `${banner}${negB}${violB}${readyB}${visaB}
   <div class="stats two">
     <div class="panel stat">${eyeH('ui.receber', 'A receber')}<div class="v">${fmt(pendingPay(S))}</div><div class="s">${next ? 'Próximo: ' + dayFull(next.payday) : 'Nenhum holerite pendente'}</div></div>
     <div class="panel stat">${eyeH('ui.totalsaldo', 'Total com saldo')}<div class="v">${fmt(balance(S) + pendingPay(S))}</div><div class="s">Saldo + holerites pendentes</div></div>
   </div>
   <section class="panel pad" style="display:flex;flex-direction:column;gap:8px">
-    <div class="sec-head"><div><div class="eyebrow">DRE simplificado</div><h2 class="hrow">Semana ${weekLabel(S.week.start).toLowerCase()}${TP.btn}</h2></div>
+    <div class="sec-head"><div><div class="eyebrow">Resultado da semana</div><h2 class="hrow">Semana ${weekLabel(S.week.start).toLowerCase()}${TP.btn}</h2></div>
       <button class="btn sm" data-act="close-week" ${S.week.trips.length ? '' : 'disabled'}>Fechar semana</button></div>
     ${TP.box}${dreSummary(d)}
     <details class="more"><summary>Ver detalhamento</summary><div style="padding:0 12px 12px">${dreTable(d, s)}</div></details>
-    <p class="muted" style="margin:6px 0 0;font-size:13px">Ao fechar, o holerite deposita o líquido do contracheque no dia do pagamento, e as despesas e o custo de vida saem do saldo.${s.borrowed.on && d.counts.borrowed && s.borrowed.settle === 'immediate' ? ` Viagens de carro na semana: ${fmt(d.borrowedTotal)}, já creditado no saldo.` : ''}</p>
+    <p class="muted" style="margin:6px 0 0;font-size:13px">${d.taxType === '1099' ? 'Ao fechar, o acerto (settlement) deposita o líquido no dia do pagamento, já sem a reserva de impostos; as despesas e os custos saem do saldo.' : 'Ao fechar, o holerite deposita o líquido do contracheque no dia do pagamento, e as despesas e o custo de vida saem do saldo.'}${s.borrowed.on && d.counts.borrowed && s.borrowed.settle === 'immediate' ? ` Viagens de carro na semana: ${fmt(d.borrowedTotal)}, já creditado no saldo.` : ''}</p>
   </section>
   <div class="muted" style="font-size:13px">${syncBadge()}</div>`;
 }
@@ -1055,8 +1132,9 @@ function dreSummary(d) {
   const r = (label, v, note = '', cls = '', key = '') => { const h = help(key, label); return `<tr class="${cls}"><td><span class="lab-row" style="justify-content:flex-start">${label}${h.btn}</span>${note ? `<small>${note}</small>` : ''}${h.box}</td><td class="${cls === 'tot' ? (v < 0 ? 'neg' : 'pos') : ''}">${fmt(v)}</td></tr>`; };
   const D = d.deductions || { total: 0 }, O = d.opCosts || { total: 0 };
   let h = '<table class="sumtbl"><tbody>';
-  h += r('Salário bruto', d.revenue, `${d.counts.company} viage${d.counts.company === 1 ? 'm' : 'ns'} de caminhão · ${fmtN(d.miles)} mi`, '', 'ui.bruto');
-  if (D.total) h += r('(−) Impostos e descontos', D.total, `Líquido do holerite ${fmt(d.takeHome)}`, '', 'ui.impostos');
+  h += r(d.taxType === '1099' ? 'Receita bruta' : 'Salário bruto', d.revenue, `${d.counts.company} viage${d.counts.company === 1 ? 'm' : 'ns'} de caminhão · ${fmtN(d.miles)} mi`, '', 'ui.bruto');
+  const self = d.taxType === '1099';
+  if (D.total) h += r(self ? '(−) Reserva de impostos e descontos' : '(−) Impostos e descontos', D.total, `${self ? 'Líquido do acerto (settlement)' : 'Líquido do holerite'} ${fmt(d.takeHome)}`, '', self ? 'ui.reserva' : 'ui.impostos');
   if (d.variable.total) h += r('(−) Despesas de viagem', d.variable.total, '', '', 'ui.despesas');
   if (O.total) h += r('(−) Custos do caminhão', O.total, '', '', 'ui.caminhao');
   if (d.fixed.total) h += r('(−) Moradia e custos fixos', d.fixed.total, [d.fixed.loan ? `inclui parcela do empréstimo ${fmt(d.fixed.loan)}` : '', S.settings.bills.on ? `cobrados toda ${E.WEEKDAYS_FULL[S.settings.bills.weekday].toLowerCase()}` : ''].filter(Boolean).join(' · '), '', 'ui.fixos');
@@ -1079,7 +1157,7 @@ function dreTable(d, s) {
     cpm: `Milhas rodadas (${fmtN(l.miles)} mi${l.rate != null ? ` × ${fmt(l.rate)}` : ', taxas por viagem'})`
   })[l.mode] || 'Salário base';
   let h = '<table class="dre"><tbody>';
-  h += grp('Receita bruta (salário)', R);
+  h += grp(d.taxType === '1099' ? 'Receita bruta (settlement)' : 'Receita bruta (salário)', R);
   if (!lines.length) h += row('Sem salário fixo', 0, 'sub', false, true);
   for (const l of lines) h += row(lab(l), l.value, 'sub', true, true);
   const hl = lines.find(l => l.mode === 'hourly');
@@ -1101,15 +1179,16 @@ function dreTable(d, s) {
 
   const D = d.deductions;
   if (D && D.total) {
-    h += grp('(−) Impostos e descontos', D.total);
-    if (D.federal) h += row('Imposto de renda federal (retido)', D.federal);
+    const self = d.taxType === '1099';
+    h += grp(self ? '(−) Reserva de impostos e descontos' : '(−) Impostos e descontos', D.total);
+    if (D.federal) h += row(self ? `Imposto de renda federal (estimado${s.taxes.qbi !== false ? ', com dedução QBI de 20%' : ''})` : 'Imposto de renda federal (retido)', D.federal);
     if (D.fica) h += row(`FICA · Seguridade Social + Medicare (${fmtN(s.taxes.ficaPct)}%)`, D.fica);
     if (D.se) h += row(`Self-employment tax · autônomo (${fmtN(s.taxes.sePct)}%)`, D.se);
     if (D.state) h += row(`Imposto estadual (${fmtN(s.taxes.statePct)}%)`, D.state);
     if (D.health) h += row('Plano de saúde', D.health);
     if (D.k401) h += row(`401(k) · aposentadoria (${fmtN(s.benefits.k401Pct)}%)`, D.k401);
     if (d.perDiem) h += row(`Diária isenta: ${d.awayDays} dia${d.awayDays === 1 ? '' : 's'} fora reduzem a base do imposto`, d.perDiem, 'sub info');
-    h += row('(=) Líquido do holerite', d.takeHome, 'sub subtotal');
+    h += row(self ? '(=) Líquido do acerto (settlement)' : '(=) Líquido do holerite', d.takeHome, 'sub subtotal');
   }
 
   const V = d.variable, pays = key => (s.expenses || {})[key];
@@ -1187,8 +1266,8 @@ function hosPanel(days) {
   const cycBox = rep.over ? chips([], [{ code: 'cycle', level: 'bad', text: 'Ciclo semanal estourado' }]) : null;
   const HJ = help('ui.hos', 'Jornada');
   return `<section class="panel pad" style="display:flex;flex-direction:column;gap:6px">
-    <div class="sec-head"><div><div class="eyebrow">FMCSA · Hours of Service</div><h3 class="hrow">Jornada${HJ.btn}</h3></div><span class="chip ${cyc}">Ciclo ${rep.limit}h/${rep.window} dias: ${fmtN(rep.cycleUsed)}h usadas · ${fmtN(rep.cycleLeft)}h livres</span></div>${HJ.box}
-    <p class="muted" style="margin:0;font-size:13px">${isLocalOp() && s.hos.shortHaul ? `Operação local: isenção de curta distância até ${fmtN(s.hos.radius)} mi aéreas da base e 14h de jornada, sem pausa obrigatória de 30 min. Direção continua limitada a 11h.` : 'Limites: 11h de direção e 14h de jornada por dia, pausa de 30 min após 8h dirigindo, 10h de folga antes do próximo turno e restart de 34h.'}</p>
+    <div class="sec-head"><div><div class="eyebrow">FMCSA · Hours of Service</div><h3 class="hrow">Jornada${HJ.btn}</h3></div><span class="chip ${cyc} wrapok">Ciclo ${rep.limit}h/${rep.window} dias: ${fmtN(rep.cycleUsed)}h usadas · ${fmtN(rep.cycleLeft)}h livres${rep.restartDay ? ` · restart no dia ${rep.restartDay}` : ''}</span></div>${HJ.box}
+    <p class="muted" style="margin:0;font-size:13px">${isLocalOp() && s.hos.shortHaul ? `Operação local: isenção de curta distância até ${fmtN(s.hos.radius)} mi aéreas da base e 14h de jornada, sem pausa obrigatória de 30 min. Direção continua limitada a 11h.` : 'Limites: 11h de direção e 14h de jornada por dia, pausa de 30 min após 8h dirigindo e 10h de folga antes do próximo turno.'}</p>
     ${cycBox ? `<div class="alerts">${cycBox.chips}</div>${cycBox.boxes}` : ''}
     ${anyHours ? rows + '<p class="muted" style="margin:0;font-size:12.5px">Toque em um alerta para ver o que significa, a consequência e como resolver. Vermelho = infração; amarelo = aviso.</p>' : '<p class="muted" style="margin:0;font-size:13px">Informe as horas de direção e de serviço nas viagens para acompanhar a jornada.</p>'}
   </section>`;
@@ -1214,15 +1293,16 @@ function holerite() {
   const list = S.payroll.slice().sort((a, b) => b.weekStart - a.weekStart);
   const items = list.map(p => {
     const paid = p.status === 'paid', ready = !paid && p.payday <= S.gameDay, left = p.payday - S.gameDay;
+    const self = p.breakdown && p.breakdown.tax === '1099';
     const chip = paid ? `<span class="chip ok">Pago no dia ${p.paidDay}</span>` : ready ? `<span class="chip warn">Disponível</span>` : `<span class="chip">Previsto · falta${left === 1 ? '' : 'm'} ${left} dia${left === 1 ? '' : 's'}</span>`;
     const bk = p.breakdown ? `<table class="bk"><tbody>
-        <tr><td>Salário bruto${p.breakdown.safety ? ' (inclui bônus de segurança)' : ''}</td><td>${fmt(p.breakdown.gross)}</td></tr>
-        <tr><td>(−) Impostos e descontos</td><td>${fmt(p.breakdown.ded)}</td></tr>
-        <tr class="t"><td>(=) Líquido do holerite</td><td>${fmt(p.breakdown.takeHome)}</td></tr>
-        ${p.breakdown.mode === 'takehome' ? `<tr><td class="muted">Despesas e custo de vida (já debitados do saldo no fechamento)</td><td class="muted">${fmt(-p.breakdown.living)}</td></tr>` : `<tr><td>(−) Despesas e custo de vida</td><td>${fmt(p.breakdown.living)}</td></tr><tr class="t"><td>(=) Depositado (lucro líquido)</td><td>${fmt(p.amount)}</td></tr>`}
+        <tr><td>${self ? 'Receita bruta' : 'Salário bruto'}${p.breakdown.safety ? ' (inclui bônus de segurança)' : ''}</td><td>${fmt(p.breakdown.gross)}</td></tr>
+        <tr><td>(−) ${self ? 'Reserva de impostos e descontos' : 'Impostos e descontos'}</td><td>${fmt(p.breakdown.ded)}</td></tr>
+        <tr class="t"><td>(=) ${self ? 'Líquido do acerto' : 'Líquido do holerite'}</td><td>${fmt(p.breakdown.takeHome)}</td></tr>
+        ${p.amount === p.breakdown.takeHome && E.n(p.breakdown.living) > 0 ? `<tr><td class="muted">Despesas e custo de vida (já debitados do saldo)</td><td class="muted">${fmt(-p.breakdown.living)}</td></tr>` : ''}
       </tbody></table>` : '';
     return `<div class="panel pad" style="display:flex;flex-direction:column;gap:8px">
-      <div class="row between"><div><div class="eyebrow">Semana trabalhada</div><h3>${weekLabel(p.weekStart)}</h3></div><div style="font-family:var(--display);font-size:24px;font-weight:600" class="${p.amount < 0 ? 'neg' : ''}">${fmt(p.amount)}</div></div>
+      <div class="row between"><div><div class="eyebrow">${self ? 'Acerto (settlement) da semana' : 'Holerite da semana'}</div><h3>${weekLabel(p.weekStart)}</h3></div><div style="font-family:var(--display);font-size:24px;font-weight:600" class="${p.amount < 0 ? 'neg' : ''}">${fmt(p.amount)}</div></div>
       ${bk}
       <div class="row between"><div class="row" style="gap:8px">${chip}<span class="muted" style="font-size:13px">Pagamento: ${dayFull(p.payday)}</span></div>
       ${paid ? '' : `<button class="btn sm ${ready ? 'primary' : ''}" data-pay="${esc(p.id)}">${ready ? 'Receber' : 'Receber agora'}</button>`}</div>
@@ -1230,10 +1310,10 @@ function holerite() {
   }).join('') || `<div class="empty">Nenhum holerite ainda. Feche uma semana no Painel para gerar o primeiro.</div>`;
   const led = S.ledger.slice().sort((a, b) => b.day - a.day || 0).slice(0, 40).map(e => `<div class="li"><div><div>${esc(e.desc)}</div><div class="muted" style="font-size:12.5px">${dayFull(e.day)}${!e.locked && e.ref && e.ref.startsWith('trip:') ? ' · semana em aberto' : ''}</div></div><b class="${e.amount < 0 ? 'neg' : 'pos'}">${e.amount < 0 ? '' : '+'}${fmt(e.amount)}</b></div>`).join('') || '<div class="muted">Sem movimentações.</div>';
   const sf = s.safety, streak = S.career.safetyStreak || 0;
-  return `<div class="stats">
-    <div class="panel stat"><div class="eyebrow">Saldo bancário</div><div class="v">${fmt(balance(S))}</div><div class="s">${s.loan.on ? `Empréstimo: devendo ${fmt(S.bank.loanTotal)} · parcela de ${fmt(s.loan.installment)} no dia ${S.career.loanNext}` : 'Sem empréstimo ativo'}</div></div>
+  const extra = s.loan.on ? ['Empréstimo', fmt(S.bank.loanTotal), `Parcela de ${fmt(s.loan.installment)} no dia ${S.career.loanNext}`] : S.career.k401 ? ['401(k) acumulado', fmt(S.career.k401), 'Aposentadoria guardada'] : null;
+  return `<div class="stats two">
     <div class="panel stat">${eyeH('ui.receber', 'A receber')}<div class="v">${fmt(pendingPay(S))}</div><div class="s">${s.payroll.lagOn ? `Pay lag de ${s.payroll.lagWeeks} semana${s.payroll.lagWeeks == 1 ? '' : 's'} · ${E.WEEKDAYS_FULL[s.payroll.paydayWeekday].toLowerCase()}` : 'Pagamento ao fechar a semana'}</div></div>
-    <div class="panel stat">${eyeH('ui.totalsaldo', 'Total com saldo')}<div class="v">${fmt(balance(S) + pendingPay(S))}</div><div class="s">${S.career.k401 ? '401(k) acumulado: ' + fmt(S.career.k401) : 'Saldo + holerites pendentes'}</div></div>
+    ${extra ? `<div class="panel stat"><div class="eyebrow">${extra[0]}</div><div class="v">${extra[1]}</div><div class="s">${extra[2]}</div></div>` : `<div class="panel stat"><div class="eyebrow">Holerites pagos</div><div class="v">${S.payroll.filter(p => p.status === 'paid').length}</div><div class="s">Nas últimas 12 semanas</div></div>`}
   </div>
   ${sf.on ? `<div class="panel pad row between"><div>${eyeH('ui.seguranca', 'Bônus de segurança')}<div>${streak % sf.weeks} de ${sf.weeks} semanas seguidas sem multa ou dano</div></div><b>${fmt(sf.amount)}</b></div>` : ''}
   ${(h => `<div class="sec-head"><h2 class="hrow">Holerites${h.btn}</h2></div>${h.box}`)(help('ui.holerite', 'Holerites'))}
@@ -1242,26 +1322,27 @@ function holerite() {
   <section class="panel pad" style="display:flex;flex-direction:column;gap:8px">
     ${(h => `<div class="sec-head"><h2 class="hrow">Extrato${h.btn}</h2><button class="btn sm" data-act="adjust">Ajustar saldo</button></div>${h.box}`)(help('ui.extrato', 'Extrato'))}
     <div class="ledger">${led}</div>
+    ${E.n(S.bank.archived) ? `<p class="muted" style="margin:0;font-size:12.5px">Lançamentos com mais de 12 semanas ficam somados no saldo (${fmt(S.bank.archived)}) e saem desta lista.</p>` : ''}
   </section>`;
 }
 
 function historico() {
   const weeks = H.slice().sort((a, b) => b.start - a.start);
   if (!weeks.length) return `<div class="sec-head"><h2>Histórico</h2></div><div class="empty">As semanas fechadas aparecem aqui, com DRE e todas as viagens.</div>`;
-  const totals = weeks.reduce((a, w) => ({ net: a.net + w.dre.net, freight: a.freight + w.dre.freight, miles: a.miles + w.dre.miles }), { net: 0, freight: 0, miles: 0 });
+  const totals = weeks.reduce((a, w) => ({ net: a.net + w.dre.net, gross: a.gross + E.n(w.dre.revenue), miles: a.miles + w.dre.miles }), { net: 0, gross: 0, miles: 0 });
   const TH = help('tab.historico', 'Histórico');
   return `<div class="sec-head"><div><div class="eyebrow">Fretes realizados</div><h2 class="hrow">Histórico${TH.btn}</h2></div></div>${TH.box}
   <div class="stats">
     <div class="panel stat"><div class="eyebrow">Lucro acumulado</div><div class="v">${fmt(totals.net)}</div><div class="s">${weeks.length} semana${weeks.length === 1 ? '' : 's'} fechada${weeks.length === 1 ? '' : 's'}</div></div>
-    <div class="panel stat"><div class="eyebrow">Frete bruto</div><div class="v">${fmt(totals.freight)}</div><div class="s">Viagens da empresa</div></div>
-    <div class="panel stat"><div class="eyebrow">Distância</div><div class="v">${fmtN(totals.miles)} mi</div><div class="s">Viagens da empresa</div></div>
+    <div class="panel stat"><div class="eyebrow">Ganho bruto</div><div class="v">${fmt(totals.gross)}</div><div class="s">${totals.miles ? fmt(totals.gross / totals.miles) + ' por milha' : 'Antes de impostos'}</div></div>
+    <div class="panel stat"><div class="eyebrow">Distância</div><div class="v">${fmtN(totals.miles)} mi</div><div class="s">Viagens de caminhão</div></div>
   </div>
   ${weeks.map(w => {
-    const ws = E.mergeDefaults(w.settings || S.settings);
-    const rows = w.trips.slice().sort((a, b) => a.day - b.day).map(t => `<tr><td>${t.day}</td><td>${esc(t.origin)}</td><td>${esc(t.dest)}</td><td>${t.type === 'borrowed' ? 'Carro' : 'Caminhão'}</td><td>${esc(t.status)}</td><td class="num">${fmtN(t.miles)}</td><td class="num">${fmt(t.freight)}</td><td class="num">${fmt(t.bonus || 0)}</td><td class="num">${[t.breakfast, t.lunch, t.dinner, t.hotel].map(x => E.n(x)).join('/')}</td><td class="num">${fmt(t.fines || 0)}</td><td class="num">${t.type === 'borrowed' ? fmt(E.borrowedValue(t, ws)) : fmt(E.tripCommission(t, ws))}</td></tr>`).join('');
-    return `<details class="week"><summary><div><b>Semana ${weekLabel(w.start).toLowerCase()}</b><div class="muted" style="font-size:13px">${w.trips.length} viage${w.trips.length === 1 ? 'm' : 'ns'} · ${fmtN(w.dre.miles)} mi · frete ${fmt(w.dre.freight)}</div></div><b class="${w.dre.net < 0 ? 'neg' : 'pos'}" style="font-size:20px">${fmt(w.dre.net)}</b></summary>
+    const ws = E.mergeDefaults(w.settings || SS());
+    const rows = w.trips.slice().sort((a, b) => a.day - b.day).map(t => `<tr><td>${t.day}</td><td>${esc(t.origin)}</td><td>${esc(t.dest)}</td><td>${t.type === 'borrowed' ? 'Carro' : 'Caminhão'}</td><td>${esc(t.status)}</td><td class="num">${fmtN(t.miles)}</td><td class="num">${fmt(t.freight)}</td><td class="num">${fmt(t.bonus || 0)}</td><td class="num">${[t.breakfast, t.lunch, t.dinner, t.hotel].map(x => E.n(x)).join('/')}</td><td class="num">${fmt(t.fines || 0)}</td><td class="num">${t.type === 'borrowed' ? fmt(E.borrowedValue(t, ws)) : fmt(E.tripPay(t, ws).total)}</td></tr>`).join('');
+    return `<details class="week"><summary><div><b>Semana ${weekLabel(w.start).toLowerCase()}</b><div class="muted" style="font-size:13px">${w.trips.length} viage${w.trips.length === 1 ? 'm' : 'ns'} · ${fmtN(w.dre.miles)} mi · bruto ${fmt(w.dre.revenue)}</div></div><b class="${w.dre.net < 0 ? 'neg' : 'pos'}" style="font-size:20px">${fmt(w.dre.net)}</b></summary>
       <div class="body">${dreTable(w.dre, ws)}
-        <div class="scroll"><table class="tbl"><thead><tr><th>Dia</th><th>Origem</th><th>Destino</th><th>Tipo</th><th>Status</th><th class="num">mi</th><th class="num">Frete</th><th class="num">Bônus</th><th class="num">C/A/J/D</th><th class="num">Multas</th><th class="num">Ganho / resultado</th></tr></thead><tbody>${rows}</tbody></table></div>
+        <div class="scroll"><table class="tbl"><thead><tr><th>Dia</th><th>Origem</th><th>Destino</th><th>Tipo</th><th>Status</th><th class="num">mi</th><th class="num">Frete</th><th class="num">Bônus</th><th class="num" title="Cafés / almoços / jantas / noites em hotel">C/A/J/H</th><th class="num">Multas</th><th class="num">Ganho / resultado</th></tr></thead><tbody>${rows}</tbody></table></div>
         <div class="row"><button class="btn sm danger" data-delweek="${esc(w.id)}">Excluir semana</button></div>
       </div></details>`;
   }).join('')}`;
@@ -1308,7 +1389,7 @@ const HELP = {
   'settings.taxes.federal': Hx('Como calcular o imposto de renda federal.', '"Tabela progressiva" usa as faixas oficiais de 2026 (10% a 37%) sobre o salário anualizado. "Alíquota fixa" aplica um % simples.', 'Deixe na tabela para mais realismo.'),
   'settings.taxes.flatPct': Hx('Percentual fixo de imposto federal.', 'Usado só no modo "alíquota fixa".', 'Digite o % sobre o salário tributável. Ex.: 12.'),
   'settings.taxes.ficaPct': Hx('FICA: contribuição do empregado para a Seguridade Social (6,2%) e o Medicare (1,45%).', 'Descontada do salário de quem é W-2.', 'Deixe 7,65. Só mude se quiser simular outra regra.'),
-  'settings.taxes.sePct': Hx('Self-employment tax: a versão do FICA para autônomos (1099), que pagam a parte do empregado e a do patrão.', 'Descontada de lease e owner-operator, sobre 92,35% do lucro.', 'Deixe 15,3.'),
+  'settings.taxes.sePct': Hx('Self-employment tax: a versão do FICA para autônomos (1099), que pagam a parte do empregado e a do patrão.', 'Incide sobre 92,35% do lucro do negócio (receita menos combustível, pedágios, danos e custos do caminhão). Plano de saúde e aposentadoria não reduzem esse imposto, só o imposto de renda.', 'Deixe 15,3.'),
   /* --- Carro --- */
   'settings.borrowed.factor': Hx('O número que multiplica o frete do jogo nas viagens de carro.', 'Equilibra o carro: ele deve ser divertido, mas render menos que o caminhão. Vale para emprestado e próprio.', 'Padrão: 0,40. Veja a comparação no fim deste bloco: o ideal é emprestado entre 35% e 50% e próprio entre 55% e 75% de uma viagem de caminhão.'),
   'settings.borrowed.bonusFactor': Hx('Se o bônus da viagem de carro também é multiplicado pelo fator.', 'Sem isso, um bônus de $353 valeria mais que o próprio frete convertido.', 'Deixe marcado para manter o equilíbrio.'),
@@ -1321,13 +1402,14 @@ const HELP = {
   'settings.payroll.lagWeeks': Hx('Quantas semanas o pagamento atrasa em relação à semana trabalhada.', 'Nos EUA é comum receber a semana trabalhada só na sexta da semana seguinte (pay lag de 1 semana).', 'Digite 1 para o padrão americano, ou 0 para receber na mesma semana.'),
   'settings.payroll.paydayWeekday': Hx('O dia da semana em que o holerite cai na conta.', 'Junto com o atraso, define a data de pagamento de cada semana.', 'Sexta é o mais comum.'),
   'settings.payroll.autoPay': Hx('Depósito automático do holerite quando chega o dia.', 'Desmarcado, você precisa tocar em "Receber" no Holerite.', 'Deixe marcado para não esquecer pagamentos.'),
-  'settings.hos.cycle': Hx('O limite de horas de serviço acumuladas da FMCSA.', '70 horas em 8 dias é o padrão de quem trabalha todos os dias; 60 horas em 7 dias, de quem não opera todo dia. Depois do limite, é preciso um descanso de 34h.', 'Escolha 70/8 se a empresa roda a semana inteira.'),
+  'settings.hos.cycle': Hx('O limite de horas de serviço acumuladas da FMCSA.', '70 horas em 8 dias vale para empresas que operam todos os dias da semana; 60 horas em 7 dias, para as que não operam todo dia. Ao atingir o limite, o motorista não pode mais dirigir até o total cair ou fazer o restart de 34 horas de folga.', 'Escolha 70/8 se a empresa roda a semana inteira (é o caso da maioria das transportadoras).'),
+  'settings.hos.restart': Hx('O restart de 34 horas: 34 horas seguidas de folga zeram a contagem do ciclo de 60/70 horas.', 'É opcional na regra federal e é o jeito normal de recomeçar a semana com o ciclo cheio. O app não sabe a hora de cada viagem, então considera que um dia inteiro sem viagem de caminhão equivale ao restart.', 'Deixe ligado. Desligado, o ciclo soma sempre os últimos 7 ou 8 dias, sem zerar com a folga.'),
   'settings.hos.radius': Hx('Raio da isenção de curta distância (short-haul), em milhas aéreas a partir da base.', 'Motorista local dentro do raio e com até 14h de jornada não precisa de diário eletrônico nem da pausa de 30 min.', 'Regra atual: 150. O app avisa quando uma viagem passa de cerca de 172 milhas de estrada.'),
   'settings.hos.shortHaul': Hx('Aplicar a isenção de curta distância quando a operação for local.', 'Muda os alertas de jornada para a regra local.', 'Deixe marcado para operações Local/Day Cab.'),
   'gameDay': Hx('O dia atual no calendário do jogo.', 'Define o dia das novas viagens, as cobranças e os pagamentos.', 'Normalmente você usa os botões − e + no topo. Aqui dá para pular direto para um dia.'),
   'settings.day1Weekday': Hx('O dia da semana que corresponde ao dia 1 do jogo.', 'Faz o app saber quando começa cada semana, quando é sexta (pagamento) e quando é segunda (contas).', 'Escolha o dia da semana do seu dia 1. A planilha usa segunda.'),
   'cities': Hx('Lista de cidades sugeridas.', 'Aparecem como sugestão ao digitar origem e destino. Cidades novas usadas em viagens entram sozinhas.', 'Digite o nome e toque em Adicionar.'),
-  'lists.operation': Hx('Os tipos de operação que aparecem no contrato.', 'Local, regional e OTR mudam a jornada, a isenção de curta distância e o per diem.', 'Adicione com nomes que contenham "Local", "Day Cab", "OTR" ou "Sleeper" para o app reconhecer o tipo.'),
+  'lists.operation': Hx('Os tipos de operação que aparecem no contrato.', 'O padrão segue o mercado americano: Local (volta para casa todo dia), Regional (fica fora alguns dias), Dedicated (cliente fixo) e OTR (semanas na estrada).', 'Para o app reconhecer o tipo, use nomes com "Local" ou "Day Cab" (isenção de curta distância) e "OTR", "Long Haul" ou "Sleeper" (per diem). Os demais seguem as regras completas de jornada.'),
   /* --- Motorista --- */
   'profile.name': Hx('O nome do motorista.', 'Aparece no topo do app.', 'Digite o nome do personagem.'),
   'profile.nationality': Hx('A nacionalidade do motorista.', 'Informativo, junto com o status migratório.', 'Ex.: Brasileiro.'),
@@ -1337,7 +1419,7 @@ const HELP = {
   /* --- Contrato --- */
   'contract.companyId': Hx('A empresa com quem o motorista tem este contrato.', 'Identifica o empregador no histórico e no topo do app.', 'Escolha na lista. Para incluir uma nova, use Carreira › Empresas › Cadastrar empresa.'),
   'contract.classification': Hx('O tipo de vínculo com a empresa.', 'Define o tipo fiscal (W-2 ou 1099) e o padrão das condições: quem paga as despesas, percentual, custos do caminhão.', 'Company Driver = empregado com caminhão da empresa. Lease = arrenda o caminhão. Owner-Operator = caminhão próprio. Depois de mudar, toque em "Restaurar condições padrão".'),
-  'contract.operation': Hx('O tipo de rota.', 'Local volta para casa todo dia (isenção de curta distância). OTR dorme na estrada (per diem e regras completas de jornada).', 'Escolha o que mais se parece com as viagens que você faz no jogo.'),
+  'contract.operation': Hx('O tipo de rota, nos termos do mercado americano.', 'Local (Day Cab): volta para casa todo dia e pode usar a isenção de curta distância. Regional: fica fora alguns dias, com regras completas de jornada. Dedicated: rota fixa para um cliente. OTR / Long Haul: semanas na estrada, dormindo no caminhão, com per diem.', 'Escolha o que mais se parece com as viagens que você faz no jogo.'),
   'contract.startDay': Hx('O dia do jogo em que este contrato começou.', 'Aparece no histórico de empresas.', 'Use o dia do calendário do jogo.'),
   'contract.renomeLevel': Hx('O nível de renome do motorista nesta empresa.', 'Multiplica o bônus por nível de renome (se ligado).', 'Digite o nível atual. Suba conforme a carreira avança.'),
   'contract.truck': Hx('O caminhão usado neste contrato.', 'Informativo, para o histórico.', 'Ex.: Freightliner Cascadia.'),
@@ -1410,7 +1492,7 @@ const HELP = {
   'company.notes': Hx('Anotações livres sobre a empresa.', 'Para lembrar detalhes do enredo.', 'Ex.: frota de reefer, base em Reno.'),
   'nc.co': Hx('A empresa do novo contrato.', 'Pode ser a mesma (promoção, mudança de vínculo) ou outra.', 'Escolha ou cadastre uma nova.'),
   'nc.cls': Hx('O tipo de vínculo do novo contrato.', 'Define o tipo fiscal e o padrão das condições.', 'Ex.: passar de Company Driver para Owner-Operator.'),
-  'nc.op': Hx('O tipo de rota do novo contrato.', 'Muda jornada e per diem.', 'Escolha Local, Regional ou OTR.'),
+  'nc.op': Hx('O tipo de rota do novo contrato.', 'Muda a jornada (isenção local) e o per diem.', 'Escolha Local, Regional, Dedicated ou OTR.'),
   'nc.day': Hx('O dia do jogo em que o novo contrato começa.', 'O contrato atual termina na véspera.', 'Normalmente o dia de hoje.'),
   'nc.reason': Hx('Por que o contrato atual terminou.', 'Fica registrado no histórico de empresas.', 'Escolha o motivo.'),
   'nc.terms': Hx('De onde vêm as condições do novo contrato.', '"Padrão" aplica as condições típicas da classificação; "Copiar" repete as atuais.', 'Escolha "Padrão" ao mudar de tipo de vínculo.'),
@@ -1421,7 +1503,9 @@ const HELP = {
   'ui.receber': Hx('Holerites já gerados que ainda não caíram na conta.', 'Mostra quanto vai entrar e quando.', 'Automático: aparece depois de fechar uma semana.'),
   'ui.totalsaldo': Hx('Saldo bancário + holerites a receber.', 'Mostra o dinheiro total com que o motorista pode contar.', ''),
   'ui.bruto': Hx('Tudo que o motorista ganhou na semana antes de impostos: salário base, comissões, extras e bônus.', 'É o "gross pay" do contracheque americano.', ''),
-  'ui.impostos': Hx('Imposto federal, FICA (ou self-employment), estadual, plano de saúde e 401(k).', 'O que sobra é o líquido do holerite, que cai na conta no dia do pagamento.', ''),
+  'ui.impostos': Hx('O que a empresa retém do contracheque: imposto de renda federal, FICA (Seguridade Social e Medicare), imposto estadual, plano de saúde e 401(k).', 'O que sobra é o líquido do holerite, que cai na conta no dia do pagamento.', ''),
+  'ui.reserva': Hx('O dinheiro separado para os impostos do autônomo (1099): imposto de renda federal estimado e self-employment tax, mais plano de saúde e aposentadoria.', 'Na vida real a transportadora paga o acerto (settlement) sem reter imposto, e o autônomo paga o imposto estimado a cada trimestre (abril, junho, setembro e janeiro). Para o saldo não enganar, o app separa essa reserva toda semana.', ''),
+  'settings.taxes.qbi': Hx('A dedução QBI (Qualified Business Income, Section 199A): o autônomo abate 20% do lucro do negócio antes de calcular o imposto de renda.', 'Reduz o imposto de renda de lease e owner-operator. Não muda o self-employment tax. É permanente na lei americana desde 2025.', 'Deixe ligado. Só vale para contratos 1099; no W-2 não tem efeito.'),
   'ui.despesas': Hx('Gastos das viagens pagos pelo motorista: refeições, hotel, combustível, pedágio, multas e danos (conforme o contrato).', 'Saem do saldo quando a semana é fechada.', ''),
   'ui.caminhao': Hx('Custos de quem paga o próprio caminhão: manutenção, pneus, seguro, parcela e licenças.', 'Os custos por milha saem no fechamento; parcela e licenças saem toda semana pelo calendário.', ''),
   'ui.fixos': Hx('Moradia e parcela do empréstimo.', 'Com a cobrança automática, saem do saldo no dia de vencimento, mesmo sem salário.', ''),
@@ -1472,9 +1556,9 @@ function ruleHtml(code) {
       'Não é uma infração. Mas naquele dia a isenção deixa de valer: o motorista precisa registrar o dia inteiro no diário eletrônico (ELD/logbook) e segue as regras completas, inclusive a pausa de 30 min após 8h de direção. No dia seguinte, se voltar a cumprir as condições, a isenção volta.',
       'Aviso amarelo, sem multa nem efeito no bônus. Nesse dia o app passa a exigir a pausa de 30 min: se dirigiu mais de 8h sem marcar a pausa, aparece a infração "Faltou a pausa".',
       'Se parou durante a viagem, marque "Fez a pausa de 30 min". Se o seu trabalho costuma passar de 150 mi aéreas, mude a operação do contrato para Regional ou OTR (Carreira › Contrato › Vínculo): as regras completas passam a valer sempre e o aviso some.'),
-    cycle: Rx('A soma das horas de serviço dos últimos 8 dias passou de 70h (ou dos últimos 7 dias, de 60h, conforme o ciclo escolhido).',
-      'Infração crítica (multa média citada perto de US$ 4,8 mil e pontos no CSA). O motorista fica fora de serviço até voltar para baixo do limite. O jeito de zerar o ciclo é o restart: 34 horas seguidas de folga.',
-      P, 'Tire folga: avance pelo menos 2 dias no app sem lançar viagens de caminhão, o que equivale ao restart de 34h. Depois, distribua as horas para ficar perto de 10h por dia ou menos.')
+    cycle: Rx('A soma das horas de serviço passou do limite do ciclo: 70h em 8 dias seguidos (ou 60h em 7 dias, conforme o ciclo escolhido).',
+      'Infração crítica (multa média citada perto de US$ 4,8 mil e pontos no CSA). O motorista fica fora de serviço até o total voltar para baixo do limite. O jeito de zerar o ciclo é o restart: 34 horas seguidas de folga.',
+      P, 'Tire um dia inteiro de folga: um dia do jogo sem viagem de caminhão conta como o restart de 34h e zera o ciclo. Depois, distribua as horas para ficar perto de 10h por dia ou menos.')
   })[code] || '';
 }
 function ruleHelp(code, label) {
@@ -1505,7 +1589,7 @@ function labRow(key, label, forId) {
   return { row: `<div class="lab-row">${forId ? `<label for="${forId}">${label}</label>` : `<span class="lab">${label}</span>`}${h.btn}</div>`, box: h.box };
 }
 
-/* ---------- Ajustes ---------- */
+/* Componentes de formulário: campos ligados ao estado, blocos recolhíveis */
 const getP = (path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), S);
 function setP(path, val) { const ks = path.split('.'); let o = S; ks.slice(0, -1).forEach(k => { if (o[k] == null) o[k] = {}; o = o[k]; }); o[ks.at(-1)] = val; }
 const fid = p => 'f_' + p.replace(/[^a-z0-9]/gi, '_');
@@ -1526,6 +1610,7 @@ const mod = (title, desc, path, body, sum = '') => {
 };
 const costField = (key, label, hint) => `<div class="field">${F.chk(`settings.costs.${key}.on`, label)}<div class="money"><input id="${fid('settings.costs.' + key + '.val')}" aria-label="${label} (valor)" type="number" inputmode="decimal" step="any" data-bind="settings.costs.${key}.val" data-type="num" value="${getP('settings.costs.' + key + '.val')}" ${getP('settings.costs.' + key + '.on') ? '' : 'disabled'}></div><span class="muted" style="font-size:12px">${hint}</span></div>`;
 
+/* ---------- Aba Ajustes: regras gerais do jogo ---------- */
 const PAY_FORMS = [['weekly', 'Pagamento fixo semanal + comissão'], ['hourly', 'Por hora (Hourly Pay) + comissão'], ['cpm', 'Por milha (Cents Per Mile)'], ['percent', 'Percentual do frete (sem fixo)']];
 const PAY_HELP = {
   weekly: 'Recebe o valor fixo toda semana fechada, mais a comissão sobre o frete de cada viagem de caminhão.',
@@ -1580,7 +1665,7 @@ function rulesGuide() {
       'Feche a semana logo depois do domingo do jogo. Se lançou algo errado, edite a viagem antes de fechar: depois de fechada, a semana fica só para consulta.')),
     topic('Pagamento e pay lag', R(
       `O holerite de cada semana cai ${s.payroll.lagOn ? `na ${E.WEEKDAYS_FULL[s.payroll.paydayWeekday].toLowerCase()} de ${s.payroll.lagWeeks} semana(s) depois` : 'quando a semana é fechada'}. O valor depositado é o líquido do contracheque: salário bruto menos impostos, plano de saúde e 401(k).`,
-      'Nos EUA é comum receber a semana trabalhada só na sexta seguinte. Por isso o primeiro mês de um emprego novo é apertado.',
+      'Nos EUA é comum receber a semana trabalhada só na sexta seguinte. Por isso o primeiro mês de um emprego novo é apertado. Quem é autônomo (1099: lease e owner-operator) recebe um acerto (settlement) sem imposto retido e paga o imposto estimado a cada trimestre.',
       `${s.payroll.autoPay ? 'O depósito é automático no dia do pagamento.' : 'O depósito é manual: toque em "Receber" no Holerite.'} Despesas de viagem e custo de vida saem do saldo no fechamento, antes do holerite cair.`,
       'Comece com saldo suficiente para pelo menos duas semanas de contas (Ajustes › Início e contas fixas).')),
     topic('Contas fixas, saldo negativo e empréstimo', R(
@@ -1660,7 +1745,7 @@ function ajustes() {
     `Caminhão: ${yes(s.tripBonus !== false, 'soma', 'não soma')} · Carro: ${yes(s.borrowed.bonusOn !== false, 'soma', 'não soma')}`)}
   ${mod('Custos de vida', 'Refeições, hotel e moradia que saem do bolso do motorista.', null,
     F.sel('settings.costs.mealsMode', 'Como contar as refeições', [['trip', 'Lançar em cada viagem'], ['day', 'Automático por dia trabalhado']], { full: true }) +
-    (cs.mealsMode === 'day' ? `<div class="field full"><span class="lab">Refeições automáticas em cada dia com viagem de caminhão</span><div class="checks">${F.chk('settings.costs.auto.breakfast', 'Café')}${F.chk('settings.costs.auto.lunch', 'Almoço')}${F.chk('settings.costs.auto.dinner', 'Jantar')}</div></div>` : '') +
+    (cs.mealsMode === 'day' ? `<div class="field full">${(L => L.row + L.box)(labRow('settings.costs.auto', 'Refeições automáticas em cada dia com viagem de caminhão'))}<div class="checks">${F.chk('settings.costs.auto.breakfast', 'Café')}${F.chk('settings.costs.auto.lunch', 'Almoço')}${F.chk('settings.costs.auto.dinner', 'Jantar')}</div></div>` : '') +
     costField('breakfast', 'Café da manhã', 'Por café') + costField('lunch', 'Almoço', 'Por almoço') + costField('dinner', 'Jantar', 'Por jantar') +
     costField('hotel', 'Noite em hotel', 'Por noite lançada na viagem') + costField('housing', 'Moradia', 'Por semana fechada'),
     `${cs.mealsMode === 'day' ? 'Refeições por dia: ' + (meals.join(', ') || 'nenhuma') : 'Refeições por viagem'} · moradia ${fmt(cs.housing.val)}/semana`)}
@@ -1672,6 +1757,7 @@ function ajustes() {
       ${s.taxes.federal === 'flat' ? F.num('settings.taxes.flatPct', 'Alíquota fixa', { pct: true }) : ''}
       ${F.num('settings.taxes.ficaPct', 'FICA (W-2)', { pct: true, hint: '6,2% + 1,45%.' })}
       ${F.num('settings.taxes.sePct', 'Self-employment (1099)', { pct: true, hint: 'Sobre 92,35% do lucro.' })}
+      <div class="field">${F.chk('settings.taxes.qbi', 'Dedução QBI de 20% para autônomo (1099)')}</div>
     </div></details>` +
     `${s.taxes.filing === 'married' ? 'Casado' : 'Solteiro'} · ${s.taxes.federal === 'flat' ? 'alíquota fixa ' + fmtN(s.taxes.flatPct) + '%' : 'tabela 2026'} · estadual ${fmtN(s.taxes.statePct)}%`)}
   ${carModule()}
@@ -1683,6 +1769,7 @@ function ajustes() {
     F.sel('settings.hos.cycle', 'Ciclo semanal', [['70/8', '70 horas em 8 dias'], ['60/7', '60 horas em 7 dias']]) +
     F.num('settings.hos.radius', 'Raio da isenção local (milhas aéreas)', { step: 1, hint: 'Regra atual: 150 mi aéreas e até 14h de jornada.' }) +
     `<div class="field">${F.chk('settings.hos.shortHaul', 'Usar isenção de curta distância na operação local')}</div>` +
+    `<div class="field">${F.chk('settings.hos.restart', 'Restart de 34h: um dia inteiro de folga zera o ciclo')}</div>` +
     `<div class="field full">${F.chk('settings.hos.penalties', 'Aplicar consequências das infrações')}</div>` +
     (s.hos.penalties ? F.num('settings.hos.inspectChance', 'Chance de fiscalização por infração', { pct: true }) + F.num('settings.hos.fine', 'Multa por infração pega', { money: true }) +
       `<div class="field">${F.chk('settings.hos.resetSafety', 'Infração zera o bônus de segurança')}</div>` : ''),
@@ -1850,13 +1937,6 @@ function contractEditor(c) {
     tm.opCosts.on ? `${fmt(E.n(tm.opCosts.maintenance) + E.n(tm.opCosts.tires) + E.n(tm.opCosts.insurance))}/mi + ${fmt(E.n(tm.opCosts.truckWeekly) + E.n(tm.opCosts.otherWeekly))}/semana` : (w2 ? 'Desligado: o caminhão é da empresa' : 'Desligado'))}`}`;
 }
 
-function presetTermsFor(key, base, otr = isOtrOp()) {
-  const tmp = E.mergeDefaults(clone(S.settings));
-  if (base) Object.assign(tmp, { contract: clone(base.contract), expenses: clone(base.expenses), benefits: clone(base.benefits), perDiem: clone(base.perDiem), opCosts: clone(base.opCosts), safety: clone(base.safety) });
-  E.applyPreset(tmp, key, { otr });
-  return normTerms({ contract: tmp.contract, expenses: tmp.expenses, benefits: tmp.benefits, perDiem: tmp.perDiem, opCosts: tmp.opCosts, safety: tmp.safety, renome: base ? base.renome : { on: false, perLevel: 0 } });
-}
-
 function companyForm(id) {
   const co = id ? S.companies.find(x => x.id === id) : { name: '', hq: '', dot: '', notes: '' };
   openModal(`<div class="row between"><h2>${id ? 'Editar empresa' : 'Cadastrar empresa'}</h2><button class="btn ghost sm" data-x>Fechar</button></div>
@@ -1910,7 +1990,7 @@ function newContractFlow(companyId) {
         if (coId === '__new') { coId = uid(); st.companies.push({ id: coId, name: newName, hq: '', dot: '', notes: '' }); }
         const old = st.contracts.find(x => x.id === st.currentContractId);
         if (old) { old.endDay = Math.max(old.startDay, start - 1); old.endReason = reason; }
-        const terms = copy && old ? clone(old.terms) : presetTermsFor(E.presetKeyFor(cls), null, /otr|sleeper|longa/i.test(op));
+        const terms = copy && old ? clone(old.terms) : presetTermsFor(E.presetKeyFor(cls), null, opIsOtr(op));
         const nc = { id: uid(), companyId: coId, classification: cls, operation: op, startDay: start, endDay: null, truck: copy && old ? old.truck : '', trailer: copy && old ? old.trailer : '', renomeLevel: 1, terms };
         st.contracts.push(nc); st.currentContractId = nc.id;
       });
@@ -2044,7 +2124,7 @@ const SHEET_FMT = {
     ['Nome da empresa', 'texto · obrigatório', 'Ex.: ADM'],
     ['Sede (cidade / estado)', 'texto', 'Ex.: Carson City / NV'],
     ['Classificação', 'W-2 · Lease · Owner-Operator · Autoridade própria · Frota', 'Obrigatório'],
-    ['Operação', 'Local · Regional · OTR', 'Opcional. Padrão: Local'],
+    ['Operação', 'Local · Regional · Dedicated · OTR', 'Opcional. Padrão: Local'],
     ['Forma de pagamento', 'Fixo semanal · Por hora · Por milha · Percentual', 'Opcional. Padrão da classificação'],
     ['Valor base', 'número', 'Fixo: $ por semana · Hora: $ por hora · Milha: $ por milha · Percentual: % do frete'],
     ['Comissão (%)', 'número', 'Opcional. Sobre o frete de mercado (fixo e por hora)'],
@@ -2138,9 +2218,9 @@ function parseCareerSheet(book) {
   if (!clsRaw) errors.push('Empresa › Classificação: campo obrigatório vazio. Use W-2, Lease, Owner-Operator, Autoridade própria ou Frota.');
   else if (!clsKey) errors.push(`Empresa › Classificação: "${get(C, 'Classificação')}" não é reconhecida. Use W-2, Lease, Owner-Operator, Autoridade própria ou Frota.`);
   const opRaw = normTxt(get(C, 'Operação'));
-  const L = S ? S.settings.lists.operation : E.defaults().lists.operation;
-  const operation = !opRaw || opRaw.startsWith('local') ? L[0] : opRaw.startsWith('regional') || opRaw.includes('day cab') ? L.find(x => /regional/i.test(x)) || L[1] : opRaw.includes('otr') || opRaw.includes('longa') || opRaw.includes('sleeper') ? L.find(x => /otr/i.test(x)) || L[2] : null;
-  if (opRaw && !operation) errors.push(`Empresa › Operação: "${get(C, 'Operação')}" não é reconhecida. Use Local, Regional ou OTR.`);
+  const OPS = E.OPERATIONS;
+  const operation = !opRaw || opRaw.startsWith('local') || opRaw.includes('day cab') ? OPS[0] : opRaw.startsWith('regional') ? OPS[1] : opRaw.startsWith('dedic') ? OPS[2] : opRaw.includes('otr') || opRaw.includes('long') || opRaw.includes('sleeper') ? OPS[3] : null;
+  if (opRaw && !operation) errors.push(`Empresa › Operação: "${get(C, 'Operação')}" não é reconhecida. Use Local, Regional, Dedicated ou OTR.`);
   const payRaw = normTxt(get(C, 'Forma de pagamento'));
   const payMode = !payRaw ? null : payRaw.startsWith('fixo') || payRaw.includes('semanal') ? 'weekly' : payRaw.includes('hora') ? 'hourly' : payRaw.includes('milha') || payRaw.includes('cpm') ? 'cpm' : payRaw.includes('percent') || payRaw.includes('%') ? 'percent' : 'bad';
   if (payMode === 'bad') errors.push(`Empresa › Forma de pagamento: "${get(C, 'Forma de pagamento')}" não é reconhecida. Use Fixo semanal, Por hora, Por milha ou Percentual.`);
@@ -2182,11 +2262,10 @@ function parseCareerSheet(book) {
 
 // Monta o estado completo do app a partir dos dados lidos (cálculos refeitos com as regras atuais)
 function buildFromSheet(D) {
-  const settings = E.defaults(); settings.day1Weekday = D.day1;
-  const st = normalize({ v: 1, settings, gameDay: D.gameDay, profile: { ...D.profile, experience: 'grad', visa: 'unset', company: D.company.name, garage: D.company.hq, classification: CLASSIFICATIONS[['w2', 'lease', 'owner', 'authority', 'fleet'].indexOf(D.clsKey)], operation: D.operation }, bank: { opening: 0, loanTotal: 0 }, week: { start: 1, trips: [] }, career: { billedThrough: D.gameDay, startDay: 1 } });
+  const st = newCareer({ name: D.profile.name, nationality: D.profile.nationality, level: D.profile.level, company: D.company.name, hq: D.company.hq,
+    clsKey: D.clsKey, operation: D.operation, gameDay: D.gameDay, day1: D.day1, startDay: D.startV || 1, billedThrough: D.gameDay });
+  st.career.startDay = 1;
   const ct = activeContract(st);
-  ct.terms = presetTermsFor(D.clsKey, null, /otr|sleeper|longa/i.test(D.operation || ''));
-  ct.startDay = D.startV || 1;
   const k = ct.terms.contract;
   if (D.payMode) k.mode = D.payMode;
   if (D.baseV !== null && D.baseV !== undefined) { if (k.mode === 'weekly') k.weekly.value = D.baseV; else if (k.mode === 'hourly') k.hourly.rate = D.baseV; else if (k.mode === 'cpm') k.cpm.rate = D.baseV; else k.percent.commission = D.baseV; }
@@ -2207,7 +2286,7 @@ function buildFromSheet(D) {
     const trips = byWeek[start], d = E.dre(trips, eff), living = E.r2(d.variable.total + d.opCosts.total + d.fixed.total);
     const w = { id: 'w' + start + '-' + uid().slice(0, 4), start, end: start + 6, trips, dre: d, settings: clone(eff), closedDay: start + 7, contractId: ct.id };
     const payday = E.paydayFor(start, eff);
-    const p = { id: uid(), weekStart: start, payday, amount: d.takeHome, status: 'pending', breakdown: { gross: d.revenue, ded: d.deductions.total, takeHome: d.takeHome, living, net: d.net, mode: 'takehome', safety: 0 } };
+    const p = { id: uid(), weekStart: start, payday, amount: d.takeHome, status: 'pending', breakdown: { gross: d.revenue, ded: d.deductions.total, takeHome: d.takeHome, living, net: d.net, tax: d.taxType, safety: 0 } };
     st.payroll.push(p);
     st.ledger.push({ id: uid(), ref: 'living:' + p.id, day: Math.min(start + 7, D.gameDay), desc: `Despesas e custo de vida · semana ${weekLabel(start).toLowerCase()}`, amount: -living, locked: true });
     if (payday <= D.gameDay) payEntry(st, p, payday);
@@ -2257,7 +2336,6 @@ function importSheetFlow() {
 }
 
 /* ---------- Modais ---------- */
-let modalKey = null;
 function openModal(html, onMount) {
   const root = $('#modalRoot');
   root.innerHTML = `<div class="ov" data-ovl><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;
@@ -2285,6 +2363,30 @@ function confirmBox(title, msg, ok = 'Confirmar', danger = false) {
 function toast(msg) {
   const r = $('#toastRoot'); r.innerHTML = `<div class="toast" role="status">${esc(msg)}</div>`;
   clearTimeout(toast.t); toast.t = setTimeout(() => { r.innerHTML = ''; }, 2600);
+}
+
+// Assistente de nova carreira: o mínimo para começar com saldo e contrato corretos
+function newCareerFlow() {
+  const d = E.defaults(), weekly = E.n(d.costs.housing.val);
+  const f = (key, label, id, input) => { const L = labRow(key, label, id); return `<div class="field">${L.row}${input}${L.box}</div>`; };
+  openModal(`<div class="row between"><h2>Nova carreira</h2><button class="btn ghost sm" data-x>Fechar</button></div>
+    <p class="muted" style="margin:0;font-size:13.5px">Só o essencial para começar. Salário, despesas e todas as outras regras ficam em Carreira e em Ajustes.</p>
+    <div class="grid">
+      ${f('profile.name', 'Nome do motorista', 'nw_name', '<input id="nw_name" type="text" placeholder="Ex.: Altair Junior">')}
+      ${f('company.name', 'Empresa', 'nw_co', '<input id="nw_co" type="text" placeholder="Ex.: ADM Transport">')}
+      <div class="field full">${(L => `${L.row}<select id="nw_cls">${CLASSIFICATIONS.map((x, i) => `<option value="${PRESET_KEYS[i]}">${esc(x)}</option>`).join('')}</select>${L.box}`)(labRow('nc.cls', 'Classificação do vínculo', 'nw_cls'))}</div>
+      ${f('nc.op', 'Operação', 'nw_op', `<select id="nw_op">${E.OPERATIONS.map(x => `<option>${esc(x)}</option>`).join('')}</select>`)}
+      ${f('gameDay', 'Dia atual do jogo', 'nw_day', '<input id="nw_day" type="number" inputmode="numeric" step="1" min="1" value="1">')}
+      <div class="field full">${(L => `${L.row}<div class="money"><input id="nw_bal" type="number" inputmode="decimal" step="any" value="3000"></div><span class="muted" style="font-size:12px">A moradia (${fmt(weekly)} por semana) sai toda segunda, e o primeiro pagamento só chega na sexta da semana seguinte. Comece com pelo menos ${fmt(weekly * 2)}.</span>${L.box}`)(labRow('bank.opening', 'Saldo inicial', 'nw_bal'))}</div>
+    </div>
+    <div class="row" style="justify-content:flex-end"><button class="btn" data-x>Cancelar</button><button class="btn primary" data-ok>Criar carreira</button></div>`, sh => {
+    sh.querySelectorAll('[data-x]').forEach(b => b.onclick = closeModal);
+    sh.querySelector('[data-ok]').onclick = () => {
+      const v = id => sh.querySelector('#nw_' + id).value.trim();
+      const st = newCareer({ name: v('name'), company: v('co'), clsKey: v('cls'), operation: v('op'), gameDay: v('day'), opening: E.n(v('bal')) });
+      closeModal(); replaceAll(st, []); tab = 'painel'; render(); toast('Carreira criada. Lance a primeira viagem.');
+    };
+  });
 }
 
 function openTrip(id) {
@@ -2450,41 +2552,6 @@ function openTrip(id) {
   });
 }
 
-// Infrações de jornada da semana em aberto (só alertas de nível 'bad' + ciclo estourado)
-function weekViolations() {
-  const s = SS(); if (!s.hos.on) return [];
-  const trucks = S.week.trips.filter(t => t.type !== 'borrowed');
-  if (!trucks.length) return [];
-  const days = [...new Set(trucks.map(t => t.day))].sort((a, b) => a - b);
-  const recent = [...H.slice(-2).flatMap(w => w.trips || []), ...S.week.trips];
-  const rep = E.hos(recent, s, { local: isLocalOp(), gameDay: days[days.length - 1], days });
-  const v = [];
-  rep.rows.forEach(r => r.alerts.filter(a => a.level === 'bad').forEach(a => v.push({ day: r.day, code: a.code, text: a.text })));
-  const over = days.map(d => ({ d, r: E.hos(recent, s, { gameDay: d, days: [] }) })).find(x => x.r.over);
-  if (over) v.push({ day: over.d, code: 'cycle', text: `Ciclo de ${over.r.limit}h estourado (${fmtN(over.r.cycleUsed)}h)` });
-  return v;
-}
-const recentViolations = (st = S) => (st.career.violations || []).filter(v => v.day > st.gameDay - 56);
-
-function weekClosePlan() {
-  const s = SS();
-  const hasTruck = S.week.trips.some(t => t.type !== 'borrowed');
-  const viol = weekViolations();
-  const hosHit = s.hos.penalties && s.hos.resetSafety && viol.length > 0;
-  const clean = weekDre().clean && !hosHit;
-  const streak = S.career.safetyStreak || 0;
-  let newStreak = streak, safety = 0;
-  if (s.safety.on && hasTruck) {
-    if (clean) { newStreak = streak + 1; if (newStreak % Math.max(1, E.n(s.safety.weeks)) === 0) safety = E.n(s.safety.amount); }
-    else newStreak = 0;
-  }
-  const d = weekDre({ safety });
-  const takehome = s.payroll.deposit === 'takehome';
-  // parcelas do empréstimo e contas já cobradas pelo calendário não saem de novo no fechamento
-  const living = E.r2(Math.max(0, d.variable.total + d.opCosts.total + d.fixed.total - d.fixed.loan - billedThisWeek(S)));
-  return { d, safety, newStreak, takehome, living, amount: takehome ? d.takeHome : d.net, viol, hosHit };
-}
-
 async function closeWeekFlow() {
   const s = SS(), plan = weekClosePlan(), d = plan.d;
   const payday = s.payroll.lagOn ? E.paydayFor(S.week.start, s) : S.gameDay;
@@ -2498,7 +2565,7 @@ async function closeWeekFlow() {
        <tr class="t"><td>(=) Lucro líquido</td><td>${fmt(d.net)}</td></tr>
      </tbody></table>
      ${plan.viol.length ? `<div class="banner" style="margin-top:10px;flex-direction:column;align-items:flex-start;gap:4px"><b>${plan.viol.length} infraç${plan.viol.length === 1 ? 'ão' : 'ões'} de jornada nesta semana</b><span style="font-size:13px">${plan.viol.map(v => `Dia ${v.day}: ${esc(v.text)}`).join('<br>')}</span><span class="muted" style="font-size:12.5px">${s.hos.penalties ? `Ao fechar: ${s.hos.resetSafety ? 'o bônus de segurança zera; ' : ''}cada infração tem ${fmtN(s.hos.inspectChance)}% de chance de ser pega numa fiscalização, com multa de ${fmt(s.hos.fine)}.` : 'Consequências desligadas: só ficam registradas.'}</span></div>` : ''}
-     <div class="preview" style="margin-top:10px"><div><div class="eyebrow">Holerite</div><span class="muted" style="font-size:13px">${s.payroll.lagOn ? 'Pagamento previsto para ' + dayFull(payday) : 'Depositado agora no saldo'}${plan.takehome && plan.living ? `. As despesas (${fmt(plan.living)}) saem do saldo agora.` : ''}</span></div><b class="${plan.amount < 0 ? 'neg' : 'pos'}">${fmt(plan.amount)}</b></div>`, 'Fechar semana');
+     <div class="preview" style="margin-top:10px"><div><div class="eyebrow">Holerite</div><span class="muted" style="font-size:13px">${s.payroll.lagOn ? 'Pagamento previsto para ' + dayFull(payday) : 'Depositado agora no saldo'}${plan.living ? `. As despesas (${fmt(plan.living)}) saem do saldo agora.` : ''}</span></div><b class="${d.takeHome < 0 ? 'neg' : 'pos'}">${fmt(d.takeHome)}</b></div>`, 'Fechar semana');
   if (!ok) return;
   let week;
   commit(st => {
@@ -2506,12 +2573,13 @@ async function closeWeekFlow() {
     week = { id: 'w' + start + '-' + uid().slice(0, 4), start, end: start + 6, trips: clone(trips), dre: d, settings: clone(s), closedDay: st.gameDay, contractId: st.currentContractId };
     const ids = new Set(trips.map(t => 'trip:' + t.id));
     st.ledger.forEach(e => { if (ids.has(e.ref)) e.locked = true; });
-    const p = { id: uid(), weekStart: start, amount: plan.amount, status: 'pending', payday,
-      breakdown: { gross: d.revenue, ded: d.deductions.total, takeHome: d.takeHome, living: plan.living, net: d.net, mode: plan.takehome ? 'takehome' : 'net', safety: plan.safety } };
+    const p = { id: uid(), weekStart: start, amount: d.takeHome, status: 'pending', payday,
+      breakdown: { gross: d.revenue, ded: d.deductions.total, takeHome: d.takeHome, living: plan.living, net: d.net, tax: d.taxType, safety: plan.safety } };
     st.payroll.push(p);
-    if (plan.takehome && plan.living) st.ledger.push({ id: uid(), ref: 'living:' + p.id, day: st.gameDay, desc: `Despesas e custo de vida · semana ${weekLabel(start).toLowerCase()}`, amount: -plan.living, locked: true });
+    if (plan.living) st.ledger.push({ id: uid(), ref: 'living:' + p.id, day: st.gameDay, desc: `Despesas e custo de vida · semana ${weekLabel(start).toLowerCase()}`, amount: -plan.living, locked: true });
     if (!s.payroll.lagOn) payEntry(st, p, st.gameDay); else autoPay(st);
     st.career.safetyStreak = plan.newStreak;
+    compact(st);
     // Fiscalização: sorteio por infração (só com consequências ligadas)
     st.career.violations = st.career.violations || [];
     for (const v of plan.viol) {
@@ -2611,7 +2679,7 @@ $('#view').addEventListener('click', async e => {
   if (el.dataset.ctpreset) {
     const key = el.dataset.ctpreset, label = E.PRESETS[key];
     if (!await confirmBox(`Aplicar condições de ${esc(label)}?`, `<p style="margin:0">Remuneração, quem paga as despesas, benefícios, bônus e custos do caminhão deste contrato voltam ao padrão de ${esc(label)}.</p><p class="muted" style="margin:8px 0 0;font-size:13px">Viagens já lançadas continuam como foram lançadas.</p>`, 'Aplicar')) return;
-    commit(st => { const c = st.contracts.find(x => x.id === st.currentContractId); c.terms = presetTermsFor(key, c.terms); });
+    commit(st => { const c = st.contracts.find(x => x.id === st.currentContractId); c.terms = presetTermsFor(key, c.terms, opIsOtr(c.operation)); });
     return toast('Condições aplicadas');
   }
   if (el.dataset.dellist) {
@@ -2641,8 +2709,8 @@ $('#view').addEventListener('click', async e => {
   if (a === 'export') exportFlow();
   if (a === 'import') importFlow();
   if (a === 'add-city') { const inp = $('#newCity'); const v = inp.value.trim(); if (v && !S.settings.cities.includes(v)) commit(st => st.settings.cities.push(v)); }
-  if (a === 'reset-rules') { if (await confirmBox('Restaurar regras gerais?', 'Impostos, custos de vida, pay lag, jornada e calendário voltam ao padrão. Contratos, empresas, cidades, viagens e saldo continuam.', 'Restaurar')) commit(st => { const c = st.settings.cities, L = st.settings.lists; st.settings = E.defaults(); st.settings.cities = c; st.settings.lists = L; }); }
-  if (a === 'start-blank') { replaceAll(blankState(), []); tab = 'ajustes'; openMods.add('Início e contas fixas'); render(); toast('Defina o saldo inicial e as contas para começar'); }
+  if (a === 'reset-rules') { if (await confirmBox('Restaurar regras gerais?', 'Impostos, custos de vida, pay lag, jornada e calendário voltam ao padrão. Contratos, empresas, cidades, viagens e saldo continuam.', 'Restaurar')) commit(st => { const c = st.settings.cities, L = st.settings.lists; st.settings = E.defaults(); st.settings.cities = c; st.settings.lists = L; TERM_KEYS.forEach(k => delete st.settings[k]); }); }
+  if (a === 'start-blank') return newCareerFlow();
   if (a === 'import-sheet') importSheetFlow();
   if (a === 'sheet-template') downloadTemplate();
   if (a === 'export-sheet') exportSheet();
@@ -2660,7 +2728,6 @@ $('#view').addEventListener('keydown', e => {
 $('#view').addEventListener('change', e => {
   const el = e.target; const path = el.dataset.bind; if (!path) return;
   let v = el.dataset.type === 'bool' ? el.checked : el.dataset.type === 'num' ? E.n(el.value) : el.value;
-  if (path === '__balance') { commit(st => { st.bank.opening = E.r2(v - (balance(st) - E.n(st.bank.opening))); }, { view: false }); toast('Saldo ajustado'); return; }
   if (path === 'gameDay') v = Math.max(1, Math.round(v));
   if (path === 'settings.payroll.lagWeeks') v = Math.max(0, Math.round(v));
   commit(st => {
@@ -2671,10 +2738,21 @@ $('#view').addEventListener('change', e => {
   }, { view: el.hasAttribute('data-rerender') || path === 'gameDay' || path.startsWith('settings.loan') || path === 'bank.loanTotal' || path === 'career.loanNext' || path === 'bank.opening' });
 });
 
+/* ---------- Medidas do cabeçalho (posição do aviso e da navegação no PC) ---------- */
+function measureChrome() {
+  const hdr = document.querySelector('header.sign'), nav = document.querySelector('nav.tabs'), root = document.documentElement;
+  const h = hdr.offsetHeight, top = getComputedStyle(nav).position === 'sticky' ? nav.offsetHeight : 0;
+  root.style.setProperty('--hdr-h', h + 'px');
+  root.style.setProperty('--toast-top', (h + top + 10) + 'px');
+}
+window.addEventListener('resize', measureChrome);
+if (window.ResizeObserver) new ResizeObserver(measureChrome).observe(document.querySelector('header.sign'));
+
 /* ---------- Início ---------- */
 try { const t = sessionStorage.getItem('ats-tab'); if (t) tab = t; } catch (e) {}
 loadLocal();
 render();
+measureChrome();
 connectDb();
 
 </script>

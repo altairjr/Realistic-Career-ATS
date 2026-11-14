@@ -20,6 +20,8 @@ Comparação das regras do app com o mercado de transporte rodoviário dos EUA. 
   - Isenção de curta distância: 150 milhas aéreas e até 14h de jornada.
 - **CDL não-domiciliada:** desde 15/03/2026, só para vistos H-2A, H-2B e E-2.
 - **Imposto federal 2026:** faixas de 10% a 37%; dedução padrão de $16.100 (solteiro) ou $32.200 (casado).
+- **Autônomo (1099):** self-employment tax de 15,3% sobre 92,35% do lucro; dedução QBI de 20% (Section 199A), permanente desde 2025.
+- **Jornada em 2026:** regras federais inalteradas. Os programas-piloto (pausa da janela de 14h e divisão flexível do sleeper) começam em 2027, com cerca de 256 motoristas inscritos em cada um.
 
 ## Fontes
 - otrucking.com — Company Driver Salary Guide (2026) e Detention Pay Rates 2026
@@ -28,3 +30,5 @@ Comparação das regras do app com o mercado de transporte rodoviário dos EUA. 
 - Tax Foundation — 2026 tax brackets
 - Motive — HOS short-haul exemption
 - Trucking Info — FMCSA final non-domiciled CDL rule
+- Rose Rocket — The 14-Hour Pause Is a Pilot, Not a Policy (out/2026)
+- TaxAudit — Qualified Business Income Deduction (2026)
