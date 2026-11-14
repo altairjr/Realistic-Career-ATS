@@ -98,7 +98,7 @@ async function replaceAll(state, history) {
   runBills(S);
   S._rev = Date.now();
   persist(); render();
-  if (store.db) {
+  if (store.backend) {
     for (const id of old) if (!H.find(w => w.id === id)) await deleteWeekRemote(id);
     for (const w of H) await saveWeekRemote(w);
   }

@@ -53,6 +53,7 @@ $('#view').addEventListener('click', async e => {
     const id = el.dataset.delweek; H = H.filter(w => w.id !== id); saveLocal(); deleteWeekRemote(id); render(); return;
   }
   const a = el.dataset.act;
+  if (await accountAction(a, el)) return;
   if (a === 'new-trip') openTrip();
   if (a === 'new-contract') return newContractFlow(el.dataset.co);
   if (a === 'suggest-cpm') { const ex = EXPERIENCE.find(x => x[0] === S.profile.experience) || EXPERIENCE[0]; commit(st => { st.contracts.find(x => x.id === st.currentContractId).terms.contract.cpm.rate = E.r2((ex[2] + ex[3]) / 2); }); toast('CPM ajustado pela experiência'); }
@@ -70,11 +71,12 @@ $('#view').addEventListener('click', async e => {
   if (a === 'wipe') {
     if (!await confirmBox('Apagar tudo?', 'Ficha, viagens, holerites e histórico serão apagados nesta conta. Exporte antes se quiser guardar.', 'Apagar tudo', true)) return;
     const ids = H.map(w => w.id); S = null; H = []; clearLocal(); render();
-    if (store.db) { try { await mainRef().delete(); for (const id of ids) await deleteWeekRemote(id); } catch (x) { handleDbError(x); } }
+    await wipeRemote(ids);
   }
 });
 $('#view').addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
+  if (e.target.id === 'accPass') { e.preventDefault(); document.querySelector('[data-act="acc-in"]').click(); }
   if (e.target.id === 'newCity') { e.preventDefault(); document.querySelector('[data-act="add-city"]').click(); }
   if (e.target.id && e.target.id.startsWith('new_')) { e.preventDefault(); document.querySelector(`[data-addlist="${e.target.id.slice(4)}"]`).click(); }
 });
@@ -104,6 +106,15 @@ if (window.ResizeObserver) new ResizeObserver(measureChrome).observe(document.qu
 /* ---------- Início ---------- */
 try { const t = sessionStorage.getItem('ats-tab'); if (t) tab = t; } catch (e) {}
 loadLocal();
+store.mode = window.claude && window.claude.use ? 'claude' : cloudCfg() ? 'cloud' : 'local';
+if (store.mode === 'cloud' && !cloud.session) store.status = 'out';
 render();
 measureChrome();
-connectDb();
+// Links de e-mail (confirmar conta, trocar senha) chegam com a sessão no endereço; depois conecta a sincronização.
+cloudFromUrl().then(async r => {
+  await connectSync();
+  if (store.mode !== 'claude') render();
+  if (r && r.error) toast('O link não funcionou: ' + r.error);
+  else if (r && r.type === 'recovery') newPasswordFlow('Crie uma nova senha');
+  else if (r) toast('Conta confirmada e conectada');
+});

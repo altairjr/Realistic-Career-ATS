@@ -266,9 +266,16 @@ function exportFlow() {
     sh.querySelector('[data-x]').onclick = closeModal;
     sh.querySelector('[data-copy]').onclick = () => { const ta = sh.querySelector('#expTxt'); navigator.clipboard?.writeText(data).then(() => toast('Copiado'), () => { ta.select(); toast('Selecionado. Use Ctrl+C.'); }) ?? (ta.select(), toast('Selecionado. Use Ctrl+C.')); };
   });
-  (window.claude?.use ? window.claude.use('downloads') : Promise.resolve(null)).then(dl => {
+  const filename = `carreira-ats-dia-${S.gameDay}.json`;
+  // Fora do Claude o navegador baixa o arquivo direto
+  if (!window.claude?.use) {
+    try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' })); a.download = filename; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); toast('Backup baixado'); }
+    catch (e) { fallback(); }
+    return;
+  }
+  window.claude.use('downloads').then(dl => {
     if (!dl) return fallback();
-    dl.save({ filename: `carreira-ats-dia-${S.gameDay}.json`, data }).then(() => toast('Arquivo salvo'), e => { if (e && e.code !== 'declined') fallback(); });
+    dl.save({ filename, data }).then(() => toast('Arquivo salvo'), e => { if (e && e.code !== 'declined') fallback(); });
   }).catch(fallback);
 }
 function importFlow() {

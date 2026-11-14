@@ -1,11 +1,11 @@
-# Roadmap — onde estamos (v0.14, nov/2026)
+# Roadmap — onde estamos (v0.15, nov/2026)
 
 | Fase | Objetivo | Status |
 |---|---|---|
 | 0 | Motor de regras separado da interface | ✅ Concluída |
 | 1 | App em HTML | ✅ Concluída |
 | 1b | Revisão para escalar (código, dados, regras dos EUA) | ✅ Concluída |
-| 2 | Celular + sincronização | 🟡 Parcial |
+| 2 | Celular + sincronização | 🟡 Código pronto; falta ligar ao servidor real |
 | 3 | Integração com o jogo (telemetria) | ⬜ Não iniciada |
 | 4 | Overlay sobre o jogo | ⬜ Não iniciada |
 | 5 | Carreira avançada | 🟡 Boa parte entregue |
@@ -20,7 +20,7 @@
 - Carro emprestado e próprio; infrações de jornada com fiscalização; ajuda em todos os campos e guia das regras.
 - Importação e exportação em planilha (.xlsx) e backup em JSON.
 
-### Fase 1b — Revisão para escalar (esta versão)
+### Fase 1b — Revisão para escalar (v0.14)
 - **Código**:
   - App dividido em 13 módulos (`src/app/`), com build por concatenação e sem dependências.
   - 23 testes automáticos: 14 do motor e 9 do estado (carreira, contas, empréstimo, compactação, infrações, planilha).
@@ -40,18 +40,30 @@
   - Formulário de viagem em duas colunas no celular; valores longos não são mais cortados.
   - Holerite e Histórico sem números repetidos do cabeçalho.
 
-### Fase 2 — parte já feita
+### Fase 2 — Celular e sincronização
 - Interface para celular e PC.
 - Sincronização pela conta claude.ai quando aberto como artifact; cópia local; backup em JSON.
+
+### Fase 2b — App instalável e sincronização própria (esta versão)
+- **App instalável (PWA)**: manifesto, ícones e service worker. Abre sem internet e se atualiza sozinho.
+- **Publicação**: workflow do GitHub Pages que testa, gera e publica a cada envio para a `main`.
+- **Sincronização própria com login**:
+  - `10-storage.js` virou um controlador com dois backends: conta Claude (`12-sync-claude.js`) e servidor próprio (`14-sync-cloud.js`).
+  - Servidor Supabase acessado por REST, sem bibliotecas: criar conta, entrar, sair, trocar e recuperar senha.
+  - Tabelas `careers` e `career_weeks` com acesso por usuário (`supabase/schema.sql`).
+  - Fila offline, renovação de sessão, verificação a cada 15 s e escolha entre a carreira do aparelho e a da conta no primeiro login.
+- **Interface**: bloco de conta, servidor e instalação em Ajustes › Dados e sincronização; login já na tela de primeiro acesso; Exportar JSON baixa o arquivo direto fora do Claude.
+- **Testes**: 31 automáticos (8 novos de sincronização, com servidor de teste) e teste de dois aparelhos no navegador.
+- **Documentação**: `sincronizacao.md` com o passo a passo.
 
 ### Fase 5 — parte já feita
 - 5 classificações com predefinições; fixo, hora, CPM e percentual; jornada FMCSA; empréstimo; renome; bônus de segurança; experiência e CPM sugerido; status migratório; custos de owner-operator.
 
 ## Etapas que faltam
-### Fase 2 — restante
-- **App instalável (PWA)**: manifesto e service worker, hospedado fora do Claude (GitHub Pages), com ícone na tela inicial e uso offline.
-- **Sincronização própria com login** (ex.: Supabase): a atual só existe dentro do claude.ai, e o leitor de telemetria e o overlay precisam gravar de fora.
-- **Migração**: exportar o JSON do artifact e importar na versão hospedada.
+### Fase 2b — o que depende de você
+- Ativar o GitHub Pages (origem "GitHub Actions") e enviar para a `main`.
+- Criar o projeto no Supabase, rodar `supabase/schema.sql` e preencher `src/config.js`.
+- Primeiro teste com o servidor real: criar conta, entrar no segundo aparelho, importar o JSON do artifact.
 
 ### Fase 3 — Telemetria do ATS
 - Plugin do SDK de telemetria da SCS e app companheiro no PC (Tauri ou Electron).
@@ -69,10 +81,9 @@
 - Eventos aleatórios (inspeção, quebra) e gráficos de evolução.
 
 ## Próxima etapa de implementação
-**Fase 2b: app instalável e sincronização própria.**
-1. Subir o repositório no GitHub e publicar `dist/` no GitHub Pages (os testes já rodam a cada envio).
-2. Transformar em PWA: manifesto, ícones e service worker para uso offline.
-3. Criar a camada de sincronização com login, usando o esquema v3, e trocar `src/app/10-storage.js` por um adaptador com dois modos (conta Claude ou serviço próprio).
-4. Importar o JSON exportado da versão atual.
+**Fechar a fase 2b no servidor real** (itens acima) e corrigir o que o primeiro uso mostrar.
 
-Essa etapa vem antes da telemetria porque o app companheiro precisa de um lugar para gravar as viagens fora do Claude.
+Depois, **Fase 3: telemetria do ATS.**
+1. Protótipo do leitor: plugin do SDK de telemetria da SCS gravando os dados da entrega.
+2. App companheiro no PC que lê esses dados, entra na mesma conta e grava rascunhos de viagem no servidor.
+3. No app, tela de rascunhos: confirmar, corrigir ou descartar cada entrega.

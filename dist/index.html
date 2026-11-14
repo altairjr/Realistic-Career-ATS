@@ -3,6 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Carreira realista para American Truck Simulator: diário de bordo, contratos, resultado da semana e holerite.">
+<meta name="theme-color" content="#0d6a3c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Carreira ATS">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
 <body>
@@ -314,6 +324,18 @@ textarea{width:100%;min-height:140px;border:1px solid var(--line);background:var
 <div id="toastRoot"></div>
 
 <script>
+const APP_VERSION = '0.15.0';
+/* Servidor de sincronização (Supabase). Opcional.
+   Preencha com os dados do SEU projeto (Settings › API Keys) e rode o build.
+   A chave publicável (sb_publishable_...) pode ficar no código: quem protege os dados
+   são as regras de acesso por usuário (RLS) criadas pelo arquivo supabase/schema.sql.
+   NUNCA coloque aqui a chave secreta (sb_secret_... ou service_role).
+   Vazio = o app pergunta o servidor em Ajustes › Dados e sincronização. */
+const CLOUD_CONFIG = {
+  url: '',   // ex.: 'https://abcdefghijkl.supabase.co'
+  key: ''    // ex.: 'sb_publishable_...'
+};
+
 /* ===== Motor de cálculo — Carreira Realista ATS =====
    Regras realistas (EUA 2026), com módulos que podem ser ligados/desligados. Cada viagem guarda as regras do
    momento em que foi lançada (contrato, carro, despesas e frete).
@@ -714,60 +736,104 @@ const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(
 const clone = o => JSON.parse(JSON.stringify(o));
 const CLIENT = uid();
 const LS_KEY = 'carreira-ats-v1';
+// Leitura e gravação tolerantes no armazenamento do navegador (pode estar bloqueado)
+const lsGet = k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 
 let S = null;            // estado do app
 let H = [];              // semanas arquivadas
 let tab = 'painel';
-const store = { db: null, uid: null, status: 'local', loaded: false };
+// Sincronização: backend ativo (conta Claude ou servidor próprio), situação e se a primeira leitura já chegou
+const store = { backend: null, mode: 'local', uid: null, status: 'local', loaded: false };
 
-/* ---------- Armazenamento ---------- */
+/* ---------- Armazenamento: cópia local + sincronização ----------
+   A cópia local (localStorage) sempre vale. Quando há um backend ativo, cada mudança também é enviada a ele.
+   Um backend é um objeto com: saveMain(corpo), saveWeek(semana), deleteWeek(id), wipe(ids).
+   Backends: conta Claude (12-sync-claude.js) e servidor próprio com login (14-sync-cloud.js). */
 function saveLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify({ state: S, history: H })); } catch (e) {} }
 function loadLocal() { try { const r = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); if (r && r.state) { S = normalize(r.state); H = r.history || []; } } catch (e) {} }
 function clearLocal() { try { localStorage.removeItem(LS_KEY); } catch (e) {} }
 
-const mainRef = () => store.db.doc(`data/users/${store.uid}/app`);
-const weeksCol = () => mainRef().collection('weeks');
 let writeTimer = null, writing = false, dirty = false, lastWriteRev = 0, retries = 0;
 
 function persist() {
   saveLocal();
-  if (!store.db) return;
-  dirty = true; clearTimeout(writeTimer); writeTimer = setTimeout(flush, 700);
-  setSync('wait');
+  if (!store.backend) return;
+  dirty = true; flushSoon(700);
+  if (store.loaded) setSync('wait');
 }
+// Envia o estado ao backend. Só depois da primeira leitura, para nunca gravar por cima de dados que ainda não chegaram.
 async function flush() {
-  if (writing || !dirty || !store.db || !S) return;
+  if (writing || !dirty || !store.backend || !store.loaded || !S) return;
+  const backend = store.backend;
   writing = true; dirty = false;
   const body = clone(S); body._by = CLIENT; lastWriteRev = body._rev || 0;
-  try { await mainRef().set(body); retries = 0; setSync('on'); }
-  catch (e) { handleDbError(e, true); }
-  finally { writing = false; if (dirty) flush(); }
+  let ok = false;
+  try { await backend.saveMain(body); ok = true; retries = 0; if (store.backend === backend) setSync(dirty ? 'wait' : 'on'); }
+  catch (e) { if (store.backend === backend) { dirty = true; handleDbError(e, true); } }
+  finally { writing = false; if (ok && dirty) flushSoon(0); }
 }
-async function saveWeekRemote(w) { if (!store.db) return; try { await weeksCol().doc(w.id).set(clone(w)); } catch (e) { handleDbError(e); } }
-async function deleteWeekRemote(id) { if (!store.db) return; try { await weeksCol().doc(id).delete(); } catch (e) { handleDbError(e); } }
-// Erros do armazenamento na conta. A cópia local continua valendo em todos os casos.
+function flushSoon(ms) { clearTimeout(writeTimer); writeTimer = setTimeout(() => { writeTimer = null; flush(); }, ms); }
+async function saveWeekRemote(w) { if (!store.backend) return; try { await store.backend.saveWeek(clone(w)); } catch (e) { handleDbError(e); } }
+async function deleteWeekRemote(id) { if (!store.backend) return; try { await store.backend.deleteWeek(id); } catch (e) { handleDbError(e); } }
+async function wipeRemote(ids) { if (!store.backend) return; try { await store.backend.wipe(ids); } catch (e) { handleDbError(e); } }
+// Dados que chegaram do backend passam a valer neste aparelho
+function applyRemote(d) { S = normalize(clone(d)); delete S._by; saveLocal(); render(); }
+
+// Erros de sincronização. A cópia local continua valendo em todos os casos.
 function handleDbError(e, wasWrite) {
   const code = e && e.code;
   if (code === 'quota_exceeded') { setSync('full'); toast('Armazenamento da conta cheio. Exporte um backup e exclua semanas antigas do Histórico.'); return; }
   if (code === 'invalid_argument' || code === 'transform_error') { setSync('big'); toast('Dados grandes demais para sincronizar. Feche a semana ou exporte um backup em Ajustes.'); return; }
-  if (['revoked', 'not_granted', 'capability_disabled', 'capability_removed'].includes(code)) { store.db = null; setSync('local'); return; }
+  if (['revoked', 'not_granted', 'capability_disabled', 'capability_removed'].includes(code)) { store.backend = null; setSync('local'); return; }
+  if (code === 'auth') { setSync('login'); toast('Sua sessão expirou. Entre de novo em Ajustes › Dados e sincronização.'); return; }
+  if (code === 'setup') { setSync('setup'); return; }
   setSync('err');
-  // falha passageira: tenta gravar de novo, no máximo 3 vezes
-  if (wasWrite && retries < 3) { retries++; clearTimeout(writeTimer); writeTimer = setTimeout(() => { dirty = true; flush(); }, 3000 * retries); }
+  // falha passageira: tenta gravar de novo, no máximo 3 vezes (o servidor próprio tenta de novo a cada verificação)
+  if (wasWrite && retries < 3) { retries++; flushSoon(3000 * retries); }
 }
-function setSync(st) { store.status = st; const el = document.getElementById('syncState'); if (el) el.outerHTML = syncBadge(); }
+function setSync(st) {
+  const was = store.status; store.status = st;
+  if (typeof document === 'undefined') return;
+  const el = document.getElementById('syncState'); if (el) el.outerHTML = syncBadge();
+  if (was !== st && typeof onSyncChange === 'function') onSyncChange(st, was);
+}
+const SYNC_TEXT = {
+  on: ['on', 'Sincronizado na sua conta'], wait: ['wait', 'Salvando…'], local: ['', 'Salvo só neste navegador'],
+  err: ['wait', 'Sem conexão · cópia local'], loading: ['wait', 'Conectando…'],
+  big: ['wait', 'Sem sincronizar: dados grandes demais'], full: ['wait', 'Sem sincronizar: armazenamento cheio'],
+  out: ['', 'Salvo só neste navegador · entre na conta para sincronizar'], login: ['wait', 'Sessão expirada · entre de novo'],
+  setup: ['wait', 'Servidor sem as tabelas do app']
+};
 function syncBadge() {
-  const m = { on: ['on', 'Sincronizado na sua conta'], wait: ['wait', 'Salvando…'], local: ['', 'Salvo só neste navegador'], err: ['wait', 'Sem conexão · cópia local'], loading: ['wait', 'Conectando…'], big: ['wait', 'Sem sincronizar: dados grandes demais'], full: ['wait', 'Sem sincronizar: armazenamento cheio'] }[store.status] || ['', ''];
+  const m = SYNC_TEXT[store.status] || ['', ''];
   return `<span class="sync" id="syncState"><span class="dot ${m[0]}"></span>${m[1]}</span>`;
 }
 
-async function connectDb() {
-  if (!window.claude || !window.claude.use) { setSync('local'); return; }
+// Escolhe o modo: dentro do Claude usa a conta Claude; fora, o servidor próprio (se configurado); senão, só local.
+async function connectSync() {
+  if (typeof window !== 'undefined' && window.claude && window.claude.use) { store.mode = 'claude'; return connectClaude(); }
+  store.mode = cloudCfg() ? 'cloud' : 'local';
+  return cloudStart();
+}
+
+/* ---------- Sincronização na conta Claude (quando o app roda como artifact) ----------
+   Documentos: data/users/<id>/app (estado) e .../app/weeks/<id> (semanas). Limite de 256 KiB por documento. */
+async function connectClaude() {
   try {
     const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
     const id = user ? await user.id() : null;
     if (!db || !id) { setSync('local'); return; }
-    store.db = db; store.uid = id; setSync('loading');
+    const mainRef = () => db.doc(`data/users/${id}/app`);
+    const weeksCol = () => mainRef().collection('weeks');
+    store.uid = id; setSync('loading');
+    store.backend = {
+      name: 'claude',
+      saveMain: body => mainRef().set(body),
+      saveWeek: w => weeksCol().doc(w.id).set(w),
+      deleteWeek: wid => weeksCol().doc(wid).delete(),
+      wipe: async ids => { await mainRef().delete(); for (const wid of ids) await weeksCol().doc(wid).delete(); }
+    };
     const timer = setTimeout(() => { if (!store.loaded) setSync('err'); }, 10000);
     mainRef().onSnapshot(snap => {
       if (snap.metadata.hasPendingWrites) return;
@@ -783,7 +849,7 @@ async function connectDb() {
       if (d._by === CLIENT && (d._rev || 0) <= lastWriteRev) return;
       if (first && S && (S._rev || 0) > (d._rev || 0)) { persist(); return; }
       if (!first && dirty) return;
-      S = normalize(clone(d)); delete S._by; saveLocal(); render();
+      applyRemote(d);
     }, err => { clearTimeout(timer); handleDbError(err); });
     weeksCol().onSnapshot(qs => {
       if (qs.metadata.fromCache && qs.empty) return;
@@ -791,7 +857,258 @@ async function connectDb() {
       H = qs.docs.map(d => clone(d.data())).sort((a, b) => a.start - b.start);
       saveLocal(); if (tab === 'historico') render();
     }, err => handleDbError(err));
-  } catch (e) { setSync('local'); }
+  } catch (e) { store.backend = null; setSync('local'); }
+}
+
+/* ---------- Sincronização em servidor próprio (Supabase) com login por e-mail e senha ----------
+   Usada quando o app roda fora do Claude (GitHub Pages, app instalado, arquivo local).
+   Fala direto com a API REST do Supabase, sem bibliotecas:
+     /auth/v1  → criar conta, entrar, renovar sessão, trocar senha
+     /rest/v1  → tabelas careers (estado) e career_weeks (semanas), protegidas por usuário (supabase/schema.sql)
+   Não há canal em tempo real: o app confere o servidor a cada POLL_MS e quando volta a ficar visível ou online. */
+const CLOUD_LS = 'carreira-ats-cloud';      // servidor informado na tela (quando o build não traz um)
+const SESSION_LS = 'carreira-ats-session';  // sessão do usuário
+const LINK_LS = 'carreira-ats-linked';      // conta com a qual os dados deste navegador já foram sincronizados
+const WEEKQ_LS = 'carreira-ats-weekq';      // gravações de semanas que ainda não chegaram ao servidor
+const POLL_MS = 15000;
+
+const cloud = { session: lsGet(SESSION_LS), timer: null, busy: false, refreshing: null, choose: null, fetch: null, recovery: false };
+
+/* --- Configuração do servidor --- */
+const cleanUrl = u => String(u || '').trim().replace(/\/+$/, '');
+function cloudCfg() {
+  const b = typeof CLOUD_CONFIG !== 'undefined' ? CLOUD_CONFIG : null;
+  if (b && b.url && b.key) return { url: cleanUrl(b.url), key: String(b.key).trim(), fixed: true };
+  const r = lsGet(CLOUD_LS);
+  return r && r.url && r.key ? { url: cleanUrl(r.url), key: String(r.key).trim(), fixed: false } : null;
+}
+function cloudSetCfg(url, key) {
+  url = cleanUrl(url); key = String(key || '').trim();
+  if (!/^https:\/\/[^\s/]+$/.test(url) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(url)) throw cloudErr('config', 'O endereço deve ser como https://seu-projeto.supabase.co, sem nada depois.');
+  if (/^sb_secret_/.test(key) || jwtRole(key) === 'service_role') throw cloudErr('config', 'Essa é a chave secreta. Use a chave publicável (sb_publishable_...) ou a anon.');
+  if (key.length < 20) throw cloudErr('config', 'Cole a chave publicável inteira (sb_publishable_...).');
+  lsSet(CLOUD_LS, { url, key });
+}
+function jwtRole(k) { try { return JSON.parse(atob(k.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).role; } catch (e) { return null; } }
+function cloudErr(code, message, status) { const e = new Error(message || code); e.code = code; e.status = status; return e; }
+
+/* --- Chamadas HTTP --- */
+const AUTH_MSG = {
+  invalid_credentials: 'E-mail ou senha incorretos.',
+  email_not_confirmed: 'Confirme seu e-mail pelo link que enviamos e entre de novo.',
+  user_already_exists: 'Já existe uma conta com esse e-mail. Use "Entrar".',
+  email_exists: 'Já existe uma conta com esse e-mail. Use "Entrar".',
+  weak_password: 'Senha fraca. Use pelo menos 8 caracteres.',
+  signup_disabled: 'O servidor não aceita novas contas. Peça ao dono do servidor para liberar o cadastro.',
+  over_email_send_rate_limit: 'Muitos e-mails enviados em pouco tempo. Espere alguns minutos e tente de novo.',
+  over_request_rate_limit: 'Muitas tentativas. Espere um minuto e tente de novo.',
+  same_password: 'A nova senha precisa ser diferente da atual.',
+  email_address_invalid: 'Esse e-mail não foi aceito pelo servidor.',
+  validation_failed: 'Confira o e-mail e a senha.'
+};
+async function cloudHttp(path, { method = 'GET', body, headers = {}, token } = {}) {
+  const cfg = cloudCfg(); if (!cfg) throw cloudErr('config', 'Servidor não configurado.');
+  const f = cloud.fetch || fetch;
+  let res;
+  try {
+    res = await f(cfg.url + path, {
+      method,
+      // a chave publicável vai só no cabeçalho apikey; o Authorization leva o token do usuário
+      headers: Object.assign({ apikey: cfg.key }, token ? { Authorization: 'Bearer ' + token } : {}, body !== undefined ? { 'Content-Type': 'application/json' } : {}, headers),
+      body: body !== undefined ? JSON.stringify(body) : undefined
+    });
+  } catch (e) { throw cloudErr('network', 'Sem conexão com o servidor.'); }
+  let data = null; try { const t = await res.text(); data = t ? JSON.parse(t) : null; } catch (e) {}
+  if (res.ok) return data;
+  const ec = (data && (data.error_code || data.code || data.error)) || '';
+  const msg = AUTH_MSG[ec] || (data && (data.msg || data.message || data.error_description)) || `Erro ${res.status} no servidor.`;
+  if (path.startsWith('/rest/')) {
+    if (res.status === 401 || ec === 'PGRST301' || ec === 'PGRST303') throw cloudErr('auth', msg, res.status);
+    if (res.status === 404 || ec === 'PGRST205' || ec === '42P01' || ec === '42501') throw cloudErr('setup', 'O servidor não tem as tabelas do app. Rode o arquivo supabase/schema.sql no painel do Supabase.', res.status);
+    if (res.status === 413) throw cloudErr('invalid_argument', msg, res.status);
+  }
+  if (res.status >= 500 || res.status === 429) throw cloudErr(res.status === 429 && path.startsWith('/auth/') ? 'rate' : 'network', msg, res.status);
+  throw cloudErr(path.startsWith('/auth/') ? 'authfail' : 'server', msg, res.status);
+}
+
+/* --- Sessão --- */
+function cloudSetSession(d) {
+  cloud.session = d && d.access_token ? {
+    access_token: d.access_token, refresh_token: d.refresh_token,
+    expires_at: d.expires_at || Math.floor(Date.now() / 1000) + (d.expires_in || 3600),
+    user: { id: d.user.id, email: d.user.email }
+  } : null;
+  lsSet(SESSION_LS, cloud.session);
+}
+async function cloudToken() {
+  const s = cloud.session; if (!s) throw cloudErr('auth', 'Entre na conta.');
+  if (s.expires_at - 60 > Date.now() / 1000) return s.access_token;
+  return cloudRefresh();
+}
+// Renova o token. Chamadas simultâneas esperam a mesma renovação (o refresh token só vale uma vez).
+function cloudRefresh() {
+  if (cloud.refreshing) return cloud.refreshing;
+  const s = cloud.session; if (!s) return Promise.reject(cloudErr('auth', 'Entre na conta.'));
+  cloud.refreshing = cloudHttp('/auth/v1/token?grant_type=refresh_token', { method: 'POST', body: { refresh_token: s.refresh_token } })
+    .then(d => { cloudSetSession(d); return d.access_token; },
+      e => { if (e.code === 'authfail') { cloudSetSession(null); throw cloudErr('auth', 'Sessão expirada.'); } throw e; })
+    .finally(() => { cloud.refreshing = null; });
+  return cloud.refreshing;
+}
+// Chamada às tabelas com o token do usuário; se o servidor recusar o token, renova uma vez e repete.
+async function cloudRest(path, opt = {}) {
+  let token = await cloudToken();
+  try { return await cloudHttp('/rest/v1/' + path, Object.assign({}, opt, { token })); }
+  catch (e) {
+    if (e.code !== 'auth' || !cloud.session) throw e;
+    token = await cloudRefresh();
+    return cloudHttp('/rest/v1/' + path, Object.assign({}, opt, { token }));
+  }
+}
+
+/* --- Tabelas --- */
+const meQ = () => 'user_id=eq.' + cloud.session.user.id;
+const UPSERT = { Prefer: 'resolution=merge-duplicates,return=minimal' };
+const cloudBackend = {
+  name: 'cloud',
+  saveMain: body => cloudRest('careers?on_conflict=user_id', { method: 'POST', headers: UPSERT, body: { user_id: cloud.session.user.id, state: body, rev: body._rev || 0, client: CLIENT, updated_at: new Date().toISOString() } }),
+  // Semanas entram numa fila gravada no navegador: se a internet cair, a gravação é refeita depois.
+  saveWeek: w => { weekQ(w.id, 'save'); return drainWeeks(); },
+  deleteWeek: id => { weekQ(id, 'del'); return drainWeeks(); },
+  wipe: async () => { lsSet(WEEKQ_LS, null); await cloudRest('career_weeks?' + meQ(), { method: 'DELETE' }); await cloudRest('careers?' + meQ(), { method: 'DELETE' }); }
+};
+function weekQ(id, op) { const q = lsGet(WEEKQ_LS) || {}; if (op) q[id] = op; else delete q[id]; lsSet(WEEKQ_LS, Object.keys(q).length ? q : null); }
+const weekQPending = () => Object.keys(lsGet(WEEKQ_LS) || {}).length > 0;
+let draining = null;
+function drainWeeks() {
+  if (draining) return draining.then(drainWeeks);
+  draining = (async () => {
+    const q = lsGet(WEEKQ_LS) || {};
+    for (const id of Object.keys(q)) {
+      const w = H.find(x => x.id === id);
+      if (q[id] === 'save' && w) await cloudRest('career_weeks?on_conflict=user_id,week_id', { method: 'POST', headers: UPSERT, body: { user_id: cloud.session.user.id, week_id: id, start_day: Math.round(w.start || 0), data: w, updated_at: new Date().toISOString() } });
+      else await cloudRest(`career_weeks?${meQ()}&week_id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if ((lsGet(WEEKQ_LS) || {})[id] === q[id]) weekQ(id, null);
+    }
+  })().finally(() => { draining = null; });
+  return draining;
+}
+async function cloudLoadMain() { const r = await cloudRest('careers?select=state,rev,client&' + meQ()); return r && r[0] ? r[0] : null; }
+async function cloudLoadWeeks() { const r = await cloudRest('career_weeks?select=data&order=start_day.asc&' + meQ()); return (r || []).map(x => x.data).filter(Boolean); }
+// Este aparelho manda: o servidor fica igual aos dados locais
+async function cloudPushAll() {
+  const remote = await cloudRest('career_weeks?select=week_id&' + meQ());
+  (remote || []).forEach(r => { if (!H.find(w => w.id === r.week_id)) weekQ(r.week_id, 'del'); });
+  H.forEach(w => weekQ(w.id, 'save'));
+  await drainWeeks();
+  if (S) { dirty = true; await flush(); }
+}
+// O servidor manda: os dados locais ficam iguais aos da conta
+async function cloudPullAll(row) {
+  lsSet(WEEKQ_LS, null); dirty = false;
+  H = (await cloudLoadWeeks()).sort((a, b) => a.start - b.start);
+  applyRemote(row.state);
+}
+
+/* --- Conexão e verificação periódica --- */
+async function cloudStart() {
+  cloudStop();
+  if (!cloudCfg()) { setSync('local'); return; }
+  cloud.session = lsGet(SESSION_LS);
+  if (!cloud.session) { setSync('out'); return; }
+  store.backend = cloudBackend; store.uid = cloud.session.user.id; store.loaded = false;
+  setSync('loading');
+  try {
+    const row = await cloudLoadMain();
+    const linked = lsGet(LINK_LS) === store.uid;
+    if (!row) { store.loaded = true; await cloudPushAll(); }
+    else if (!S) { store.loaded = true; await cloudPullAll(row); }
+    else if ((S._rev || 0) === (row.rev || 0)) { store.loaded = true; await cloudSyncWeeks(); }
+    else if (linked) { store.loaded = true; if ((S._rev || 0) > (row.rev || 0)) await cloudPushAll(); else await cloudPullAll(row); }
+    else {
+      // Carreira neste aparelho e outra na conta, nunca sincronizadas entre si: a pessoa escolhe qual fica.
+      const pick = await (cloud.choose || cloudChoose)({ local: S, remote: row.state });
+      if (pick === 'cancel') { await cloudSignOut(); return; }
+      store.loaded = true;
+      if (pick === 'local') await cloudPushAll(); else await cloudPullAll(row);
+    }
+    lsSet(LINK_LS, store.uid);
+    if (store.status === 'loading') setSync('on');
+  } catch (e) {
+    handleDbError(e);
+    if (e.code === 'auth') { store.backend = null; return; }
+  }
+  if (typeof render === 'function' && typeof document !== 'undefined') render();
+  cloud.timer = setInterval(cloudPoll, POLL_MS);
+}
+function cloudStop() { clearInterval(cloud.timer); cloud.timer = null; store.backend = null; store.loaded = false; dirty = false; }
+// Confere o servidor: envia o que ficou pendente e busca o que mudou em outro aparelho.
+async function cloudPoll() {
+  if (cloud.busy || !cloud.session || store.backend !== cloudBackend) return;
+  if (typeof document !== 'undefined' && document.hidden) return;
+  cloud.busy = true;
+  try {
+    if (!store.loaded) { cloud.busy = false; clearInterval(cloud.timer); return await cloudStart(); }
+    if (weekQPending()) await drainWeeks();
+    if (writing) return;
+    const r = await cloudRest('careers?select=rev,client&' + meQ());
+    const rev = r && r[0] ? r[0].rev || 0 : null, mine = S ? S._rev || 0 : 0;
+    // conta sem carreira depois de carregada = foi apagada em outro aparelho: a cópia local fica e só volta à conta na próxima mudança
+    if (dirty || (S && rev !== null && mine > rev)) { dirty = true; retries = 0; await flush(); }
+    else if (rev !== null && rev > mine) { const row = await cloudLoadMain(); if (row && !dirty) await cloudPullAll(row); }
+    else await cloudSyncWeeks();
+    if (!dirty && ['err', 'setup', 'loading'].includes(store.status)) setSync('on');
+  } catch (e) { handleDbError(e); if (e.code === 'auth') cloudStop(); }
+  finally { cloud.busy = false; }
+}
+// Mesmo estado nos dois lados: confere se a lista de semanas arquivadas também bate.
+async function cloudSyncWeeks() {
+  if (weekQPending()) return drainWeeks();
+  const r = await cloudRest('career_weeks?select=week_id&' + meQ());
+  const ids = (r || []).map(x => x.week_id).sort().join(), mine = H.map(w => w.id).sort().join();
+  if (ids === mine || weekQPending()) return;
+  H = (await cloudLoadWeeks()).sort((a, b) => a.start - b.start);
+  saveLocal(); if (typeof document !== 'undefined' && tab === 'historico') render();
+}
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) cloudPoll(); });
+  window.addEventListener('online', () => cloudPoll());
+}
+
+/* --- Conta --- */
+async function cloudSignIn(email, password) {
+  const d = await cloudHttp('/auth/v1/token?grant_type=password', { method: 'POST', body: { email: email.trim(), password } });
+  cloudSetSession(d); await cloudStart();
+}
+// Cria a conta. Devolve true quando já entrou; false quando o servidor exige confirmar o e-mail antes.
+async function cloudSignUp(email, password) {
+  const redirect = typeof location !== 'undefined' && /^https?:/.test(location.protocol) ? '?redirect_to=' + encodeURIComponent(location.origin + location.pathname) : '';
+  const d = await cloudHttp('/auth/v1/signup' + redirect, { method: 'POST', body: { email: email.trim(), password } });
+  if (d && d.access_token) { cloudSetSession(d); await cloudStart(); return true; }
+  return false;
+}
+async function cloudSignOut() {
+  const s = cloud.session;
+  cloudStop(); cloudSetSession(null); setSync(cloudCfg() ? 'out' : 'local');
+  if (s) { try { await cloudHttp('/auth/v1/logout?scope=local', { method: 'POST', token: s.access_token }); } catch (e) {} }
+}
+async function cloudRecover(email) {
+  const redirect = typeof location !== 'undefined' && /^https?:/.test(location.protocol) ? '?redirect_to=' + encodeURIComponent(location.origin + location.pathname) : '';
+  await cloudHttp('/auth/v1/recover' + redirect, { method: 'POST', body: { email: email.trim() } });
+}
+async function cloudSetPassword(password) { await cloudHttp('/auth/v1/user', { method: 'PUT', token: await cloudToken(), body: { password } }); }
+// Links enviados por e-mail (confirmar conta, trocar senha) voltam para o app com a sessão no endereço (#access_token=...).
+async function cloudFromUrl() {
+  if (typeof location === 'undefined' || !/access_token=|error_description=/.test(location.hash)) return null;
+  const p = new URLSearchParams(location.hash.slice(1));
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  if (p.get('error_description')) return { error: p.get('error_description').replace(/\+/g, ' ') };
+  if (!cloudCfg() || !p.get('access_token')) return null;
+  try {
+    const user = await cloudHttp('/auth/v1/user', { token: p.get('access_token') });
+    cloudSetSession({ access_token: p.get('access_token'), refresh_token: p.get('refresh_token'), expires_in: +p.get('expires_in') || 3600, user });
+    return { type: p.get('type') || 'signup' };
+  } catch (e) { return { error: e.message }; }
 }
 
 /* ---------- Estado: carreira, empresas e contratos ---------- */
@@ -1064,7 +1381,7 @@ async function replaceAll(state, history) {
   runBills(S);
   S._rev = Date.now();
   persist(); render();
-  if (store.db) {
+  if (store.backend) {
     for (const id of old) if (!H.find(w => w.id === id)) await deleteWeekRemote(id);
     for (const w of H) await saveWeekRemote(w);
   }
@@ -1096,8 +1413,9 @@ function onboarding() {
     <h2>Monte sua carreira no American</h2>
     <p>Diário de bordo, contrato com a empresa, resultado da semana, fechamento com pay lag e holerite do bruto ao líquido, com regras do mercado americano em 2026. Tudo pode ser ajustado depois.</p>
     <div class="row"><button class="btn primary" data-act="start-blank">Criar carreira</button></div>
-    <p class="muted" style="font-size:13px;margin:0">Já tem seus dados numa planilha ou num backup? Crie a carreira e depois use Ajustes › Dados e sincronização › Importar planilha (ou Importar JSON). ${syncBadge()}</p>
-  </section>`;
+    <p class="muted" style="font-size:13px;margin:0">Já tem seus dados numa planilha ou num backup? Crie a carreira e depois use Ajustes › Dados e sincronização › Importar planilha (ou Importar JSON). ${store.mode === 'claude' ? syncBadge() : ''}</p>
+  </section>
+  ${store.mode === 'claude' ? '' : `<section class="panel"><div class="mod-b" style="padding-top:14px">${cloud.session ? '' : `<p class="full" style="margin:0"><b>Já usa o app em outro aparelho?</b> Entre na conta para trazer sua carreira.</p>`}${accountBlock()}</div></section>`}`;
 }
 
 const needClose = () => S.week.trips.length && S.gameDay >= S.week.start + 7;
@@ -1524,7 +1842,9 @@ const HELP = {
   'settings.hos.fine': Hx('O valor da multa por infração pega na fiscalização.', 'Debitado do saldo do motorista no fechamento. Multas reais variam muito por estado e gravidade, e as federais podem chegar a milhares de dólares, divididas entre motorista e empresa.', 'Digite o valor. Padrão: $1.000.'),
   'settings.hos.resetSafety': Hx('Se uma infração de jornada zera a contagem do bônus de segurança.', 'Empresas costumam cortar o bônus de quem tem infração no registro.', 'Deixe marcado.'),
   'data.sheet': Hx('Importação e exportação dos dados numa planilha do Excel, no formato próprio do app.', 'Para trazer a carreira de uma planilha (motorista, empresa, saldo e viagens) ou levar os dados do app para o Excel.', '"Baixar modelo" gera a planilha vazia com as abas Motorista, Empresa e Viagens e uma aba Leia-me com as regras. Preencha sem renomear abas nem colunas e use "Importar planilha". Se algo não bater (aba faltando, coluna errada, número inválido, veículo desconhecido), o app mostra a lista de erros com a linha e não altera nada. "Exportar planilha" gera o mesmo formato com os seus dados atuais.'),
-  'data.json': Hx('Backup completo de tudo: ajustes, contratos, empresas, viagens, holerites, extrato e histórico.', 'Para guardar uma cópia ou passar os dados entre a versão do Claude e a versão local (dist/index.html).', 'Exportar gera o arquivo; Importar substitui todos os dados atuais pelo arquivo escolhido.'),
+  'data.json': Hx('Backup completo de tudo: ajustes, contratos, empresas, viagens, holerites, extrato e histórico.', 'Para guardar uma cópia ou levar a carreira da versão do Claude para o app instalado (e vice-versa).', 'Exportar gera o arquivo; Importar substitui todos os dados atuais pelo arquivo escolhido. Com a conta conectada, a carreira importada também vai para a conta e aparece nos outros aparelhos.'),
+  'data.account': Hx('Sua conta no servidor de sincronização. A carreira fica guardada nela e aparece em todo aparelho onde você entrar.', 'Para usar o mesmo saldo, viagens e holerites no celular e no PC. Sem conta, o app funciona igual, mas os dados ficam só neste navegador.', 'Crie a conta uma vez com e-mail e senha e use "Entrar" nos outros aparelhos. O app confere a conta a cada 15 segundos e sempre que volta para a tela. Sem internet ele continua funcionando e envia tudo quando a conexão voltar. Se dois aparelhos mudarem a carreira ao mesmo tempo, vale a mudança mais recente: evite lançar viagens nos dois enquanto um deles estiver sem internet.'),
+  'data.install': Hx('Instalar coloca o app na tela inicial do celular ou no menu do PC, em janela própria, como um aplicativo comum.', 'Abre mais rápido e funciona sem internet. As atualizações chegam sozinhas quando houver conexão.', 'Use o botão "Instalar app" quando ele aparecer ou o menu do navegador. Instalar não muda seus dados: eles continuam neste navegador e na conta.'),
   /* --- Abas --- */
   'tab.painel': Hx('O resumo da semana em aberto.', 'Mostra o que vai receber, o resultado da semana até agora e o botão para fechar a semana.', 'Lance as viagens pelo botão "+ Viagem" e feche a semana quando o calendário passar de domingo.'),
   'tab.diario': Hx('O diário de bordo da semana: todas as viagens lançadas, dia a dia.', 'Toque numa viagem para editar ou excluir. A jornada aparece quando há horas lançadas.', ''),
@@ -1781,14 +2101,15 @@ function ajustes() {
     `Dia 1 = ${E.WEEKDAYS_FULL[s.day1Weekday].toLowerCase()} · ${s.cities.length} cidades`)}
   ${mod('Tipos de operação', 'Opções de "Especificação da operação" nos contratos.', null,
     listEditor('operation', 'Especificação da operação', 'Ex.: Dedicated Regional'), s.lists.operation.join(' · '))}
-  ${mod('Dados e sincronização', 'Seus dados ficam na sua conta e aparecem no celular e no PC.', null,
-    `<div class="full">${syncBadge()}</div>
+  ${mod('Dados e sincronização', 'Conta, instalação do app, planilha e backup.', null,
+    `${accountBlock()}${installBlock()}
      ${(L => `<div class="full">${L.row}${L.box}</div>`)(labRow('data.sheet', 'Planilha (.xlsx)'))}
      <div class="full row"><button class="btn primary" data-act="import-sheet">Importar planilha</button><button class="btn" data-act="sheet-template">Baixar modelo</button><button class="btn" data-act="export-sheet">Exportar planilha</button></div>
      ${(L => `<div class="full">${L.row}${L.box}</div>`)(labRow('data.json', 'Backup completo (.json)'))}
      <div class="full row"><button class="btn" data-act="export">Exportar JSON</button><button class="btn" data-act="import">Importar JSON</button></div>
-     <div class="full row"><button class="btn" data-act="reset-rules">Restaurar regras gerais</button><button class="btn danger" data-act="wipe">Apagar tudo</button></div>`,
-    store.status === 'on' ? 'Sincronizado na sua conta' : 'Exportar, importar ou recomeçar')}`;
+     <div class="full row"><button class="btn" data-act="reset-rules">Restaurar regras gerais</button><button class="btn danger" data-act="wipe">Apagar tudo</button></div>
+     <p class="full muted" style="margin:0;font-size:12.5px">Versão ${typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'de desenvolvimento'}</p>`,
+    dataSummary())}`;
 }
 
 /* ---------- Aba Carreira: motorista, contrato, empresas ---------- */
@@ -1997,6 +2318,117 @@ function newContractFlow(companyId) {
       closeModal(); ctab = 'contratos'; render(); toast('Novo contrato ativo');
     };
   });
+}
+
+/* ---------- Conta, servidor de sincronização e instalação do app (Ajustes › Dados e sincronização) ---------- */
+let installEvt = null;   // convite de instalação guardado pelo navegador (Chrome, Edge, Android)
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (tab === 'ajustes') render(); });
+  window.addEventListener('appinstalled', () => { installEvt = null; toast('App instalado'); if (tab === 'ajustes') render(); });
+}
+const isInstalled = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+const isHosted = () => /^https?:$/.test(location.protocol);
+
+function accountBlock() {
+  if (store.mode === 'claude') return `<div class="full">${syncBadge()}</div>${hint('Esta versão roda dentro do Claude e salva na sua conta Claude. Para usar o app instalado no celular ou no PC, exporte o JSON aqui e importe na versão publicada.')}`;
+  const cfg = cloudCfg(), L = labRow('data.account', 'Conta e sincronização');
+  const head = `<div class="full">${L.row}${L.box}</div>`;
+  if (!cfg) return head + `${hint('Sem servidor, os dados ficam só neste navegador. Para sincronizar celular e PC, informe o servidor (projeto Supabase). O passo a passo está em docs/sincronizacao.md.')}
+    <div class="field"><label for="cloudUrl">Endereço do servidor</label><input id="cloudUrl" type="url" inputmode="url" autocomplete="off" placeholder="https://seu-projeto.supabase.co"></div>
+    <div class="field"><label for="cloudKey">Chave publicável</label><input id="cloudKey" type="text" autocomplete="off" spellcheck="false" placeholder="sb_publishable_..."></div>
+    <div class="full row"><button class="btn primary" data-act="cloud-save">Salvar servidor</button><span>${syncBadge()}</span></div>`;
+  if (!cloud.session) return head + `
+    <div class="field"><label for="accEmail">E-mail</label><input id="accEmail" type="email" inputmode="email" autocomplete="username" placeholder="voce@exemplo.com"></div>
+    <div class="field"><label for="accPass">Senha</label><input id="accPass" type="password" autocomplete="current-password" placeholder="Pelo menos 8 caracteres"></div>
+    <div class="full row"><button class="btn primary" data-act="acc-in">Entrar</button><button class="btn" data-act="acc-up">Criar conta</button><button class="btn ghost" data-act="acc-forgot">Esqueci a senha</button>${cfg.fixed ? '' : '<button class="btn ghost" data-act="cloud-clear">Trocar servidor</button>'}</div>
+    <div class="full">${syncBadge()}</div>`;
+  return head + `<div class="full row between"><span>Conectado como <b>${esc(cloud.session.user.email)}</b></span>${syncBadge()}</div>
+    <div class="full row"><button class="btn" data-act="acc-sync">Sincronizar agora</button><button class="btn" data-act="acc-pass">Trocar senha</button><button class="btn" data-act="acc-out">Sair</button></div>`;
+}
+function installBlock() {
+  if (store.mode === 'claude') return '';
+  const L = labRow('data.install', 'Instalar o app');
+  const body = isInstalled() ? hint('O app está instalado neste aparelho e abre sem internet.')
+    : !isHosted() ? hint('Para instalar, abra o app pelo endereço publicado (GitHub Pages). Aberto como arquivo, ele funciona, mas não instala nem atualiza sozinho.')
+    : installEvt ? `<div class="full row"><button class="btn primary" data-act="install">Instalar app</button></div>`
+    : hint('No iPhone ou iPad (Safari): Compartilhar › Adicionar à Tela de Início. No Android ou no PC (Chrome, Edge): menu do navegador › Instalar app.');
+  return `<div class="full">${L.row}${L.box}</div>${body}`;
+}
+function dataSummary() {
+  if (store.mode === 'claude') return store.status === 'on' ? 'Sincronizado na sua conta' : 'Exportar, importar ou recomeçar';
+  if (cloud.session) return `Conta ${cloud.session.user.email} · ${(SYNC_TEXT[store.status] || ['', ''])[1].toLowerCase()}`;
+  return cloudCfg() ? 'Entre na conta para sincronizar celular e PC' : 'Salvo só neste navegador';
+}
+
+// Carreira neste aparelho diferente da que está na conta: mostra as duas e pergunta qual fica.
+function cloudChoose({ local, remote }) {
+  const card = (t, st) => { let b = 0; try { b = balance(normalize(clone(st))); } catch (e) {} return `<div class="panel pad" style="flex:1;min-width:150px"><div class="eyebrow">${t}</div><b>${esc((st.profile && st.profile.name) || 'Sem nome')}</b><div class="muted" style="font-size:13px">Dia ${fmtN(st.gameDay || 1)} · saldo ${fmt(b)}</div></div>`; };
+  return new Promise(res => {
+    openModal(`<h2>Qual carreira fica?</h2>
+      <p style="margin:0">Este aparelho tem uma carreira e a conta já tem outra. Só uma pode ficar; a outra é substituída.</p>
+      <div class="row" style="align-items:stretch">${card('Neste aparelho', local)}${card('Na conta', remote)}</div>
+      <p class="muted" style="margin:0;font-size:13px">Na dúvida, cancele e faça um backup em Exportar JSON antes de entrar.</p>
+      <div class="row" style="justify-content:flex-end"><button class="btn" data-pick="cancel">Cancelar</button><button class="btn" data-pick="local">Enviar a deste aparelho</button><button class="btn primary" data-pick="remote">Usar a da conta</button></div>`, sh => {
+      sh.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { closeModal(); res(b.dataset.pick); });
+    });
+  });
+}
+function newPasswordFlow(title = 'Trocar senha') {
+  openModal(`<h2>${title}</h2>
+    <div class="field"><label for="npw">Nova senha</label><input id="npw" type="password" autocomplete="new-password" placeholder="Pelo menos 8 caracteres"></div>
+    <div class="row" style="justify-content:flex-end"><button class="btn" data-x>Cancelar</button><button class="btn primary" data-ok>Salvar senha</button></div>`, sh => {
+    sh.querySelector('[data-x]').onclick = closeModal;
+    sh.querySelector('[data-ok]').onclick = async () => {
+      const pw = sh.querySelector('#npw').value;
+      if (pw.length < 8) return toast('Use pelo menos 8 caracteres.');
+      try { await cloudSetPassword(pw); closeModal(); toast('Senha alterada'); } catch (e) { toast(e.message); }
+    };
+  });
+}
+
+// Ações dos botões do bloco. Devolve true quando a ação era daqui.
+async function accountAction(a, el) {
+  const val = id => (document.getElementById(id) || {}).value || '';
+  const busy = async fn => { el.disabled = true; try { await fn(); } catch (e) { toast(e.message || 'Não foi possível concluir.'); } finally { el.disabled = false; } };
+  if (a === 'cloud-save') {
+    try { cloudSetCfg(val('cloudUrl'), val('cloudKey')); } catch (e) { toast(e.message); return true; }
+    store.mode = 'cloud'; await cloudStart(); render(); toast('Servidor salvo. Agora entre ou crie sua conta.'); return true;
+  }
+  if (a === 'cloud-clear') {
+    if (!await confirmBox('Trocar servidor?', 'O endereço e a chave salvos neste navegador são apagados. Seus dados locais continuam.', 'Trocar')) return true;
+    await cloudSignOut(); lsSet(CLOUD_LS, null); lsSet(LINK_LS, null); store.mode = 'local'; setSync('local'); render(); return true;
+  }
+  if (a === 'acc-in' || a === 'acc-up') {
+    const email = val('accEmail').trim(), pw = val('accPass');
+    if (!/^\S+@\S+\.\S+$/.test(email)) { toast('Informe um e-mail válido.'); return true; }
+    if (pw.length < (a === 'acc-up' ? 8 : 1)) { toast(a === 'acc-up' ? 'Use uma senha com pelo menos 8 caracteres.' : 'Informe a senha.'); return true; }
+    await busy(async () => {
+      if (a === 'acc-in') { await cloudSignIn(email, pw); if (cloud.session) toast('Conta conectada'); }
+      else if (await cloudSignUp(email, pw)) toast('Conta criada e conectada');
+      else { await confirmBox('Confirme seu e-mail', `Enviamos um link para <b>${esc(email)}</b>. Abra o link e depois volte aqui para entrar.`, 'Entendi'); return; }
+      render();
+    });
+    return true;
+  }
+  if (a === 'acc-forgot') {
+    const email = val('accEmail').trim();
+    if (!/^\S+@\S+\.\S+$/.test(email)) { toast('Preencha o e-mail da conta e toque de novo.'); return true; }
+    await busy(async () => { await cloudRecover(email); await confirmBox('Veja seu e-mail', `Se existir uma conta com <b>${esc(email)}</b>, enviamos um link para criar uma nova senha. Abra o link neste aparelho.`, 'Entendi'); });
+    return true;
+  }
+  if (a === 'acc-sync') { await busy(async () => { await cloudPoll(); toast(store.status === 'on' ? 'Tudo sincronizado' : (SYNC_TEXT[store.status] || ['', 'Sem conexão'])[1]); }); return true; }
+  if (a === 'acc-pass') { newPasswordFlow(); return true; }
+  if (a === 'acc-out') {
+    if (!await confirmBox('Sair da conta?', 'Os dados continuam neste navegador e na conta. Este aparelho só para de sincronizar até você entrar de novo.', 'Sair')) return true;
+    await cloudSignOut(); render(); toast('Você saiu da conta'); return true;
+  }
+  if (a === 'install') { if (installEvt) { const ev = installEvt; installEvt = null; ev.prompt(); try { await ev.userChoice; } catch (e) {} render(); } return true; }
+  return false;
+}
+// Quando a sessão cai ou volta, a tela de Ajustes troca entre o formulário de login e a conta conectada.
+function onSyncChange(st, was) {
+  const off = x => ['out', 'login', 'local'].includes(x);
+  if (tab === 'ajustes' && off(st) !== off(was) && !document.querySelector('#modalRoot .sheet')) render();
 }
 
 /* ---------- Planilha (.xlsx) sem bibliotecas externas ----------
@@ -2603,9 +3035,16 @@ function exportFlow() {
     sh.querySelector('[data-x]').onclick = closeModal;
     sh.querySelector('[data-copy]').onclick = () => { const ta = sh.querySelector('#expTxt'); navigator.clipboard?.writeText(data).then(() => toast('Copiado'), () => { ta.select(); toast('Selecionado. Use Ctrl+C.'); }) ?? (ta.select(), toast('Selecionado. Use Ctrl+C.')); };
   });
-  (window.claude?.use ? window.claude.use('downloads') : Promise.resolve(null)).then(dl => {
+  const filename = `carreira-ats-dia-${S.gameDay}.json`;
+  // Fora do Claude o navegador baixa o arquivo direto
+  if (!window.claude?.use) {
+    try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' })); a.download = filename; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); toast('Backup baixado'); }
+    catch (e) { fallback(); }
+    return;
+  }
+  window.claude.use('downloads').then(dl => {
     if (!dl) return fallback();
-    dl.save({ filename: `carreira-ats-dia-${S.gameDay}.json`, data }).then(() => toast('Arquivo salvo'), e => { if (e && e.code !== 'declined') fallback(); });
+    dl.save({ filename, data }).then(() => toast('Arquivo salvo'), e => { if (e && e.code !== 'declined') fallback(); });
   }).catch(fallback);
 }
 function importFlow() {
@@ -2700,6 +3139,7 @@ $('#view').addEventListener('click', async e => {
     const id = el.dataset.delweek; H = H.filter(w => w.id !== id); saveLocal(); deleteWeekRemote(id); render(); return;
   }
   const a = el.dataset.act;
+  if (await accountAction(a, el)) return;
   if (a === 'new-trip') openTrip();
   if (a === 'new-contract') return newContractFlow(el.dataset.co);
   if (a === 'suggest-cpm') { const ex = EXPERIENCE.find(x => x[0] === S.profile.experience) || EXPERIENCE[0]; commit(st => { st.contracts.find(x => x.id === st.currentContractId).terms.contract.cpm.rate = E.r2((ex[2] + ex[3]) / 2); }); toast('CPM ajustado pela experiência'); }
@@ -2717,11 +3157,12 @@ $('#view').addEventListener('click', async e => {
   if (a === 'wipe') {
     if (!await confirmBox('Apagar tudo?', 'Ficha, viagens, holerites e histórico serão apagados nesta conta. Exporte antes se quiser guardar.', 'Apagar tudo', true)) return;
     const ids = H.map(w => w.id); S = null; H = []; clearLocal(); render();
-    if (store.db) { try { await mainRef().delete(); for (const id of ids) await deleteWeekRemote(id); } catch (x) { handleDbError(x); } }
+    await wipeRemote(ids);
   }
 });
 $('#view').addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
+  if (e.target.id === 'accPass') { e.preventDefault(); document.querySelector('[data-act="acc-in"]').click(); }
   if (e.target.id === 'newCity') { e.preventDefault(); document.querySelector('[data-act="add-city"]').click(); }
   if (e.target.id && e.target.id.startsWith('new_')) { e.preventDefault(); document.querySelector(`[data-addlist="${e.target.id.slice(4)}"]`).click(); }
 });
@@ -2751,10 +3192,22 @@ if (window.ResizeObserver) new ResizeObserver(measureChrome).observe(document.qu
 /* ---------- Início ---------- */
 try { const t = sessionStorage.getItem('ats-tab'); if (t) tab = t; } catch (e) {}
 loadLocal();
+store.mode = window.claude && window.claude.use ? 'claude' : cloudCfg() ? 'cloud' : 'local';
+if (store.mode === 'cloud' && !cloud.session) store.status = 'out';
 render();
 measureChrome();
-connectDb();
+// Links de e-mail (confirmar conta, trocar senha) chegam com a sessão no endereço; depois conecta a sincronização.
+cloudFromUrl().then(async r => {
+  await connectSync();
+  if (store.mode !== 'claude') render();
+  if (r && r.error) toast('O link não funcionou: ' + r.error);
+  else if (r && r.type === 'recovery') newPasswordFlow('Crie uma nova senha');
+  else if (r) toast('Conta confirmada e conectada');
+});
 
+</script>
+<script>
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
 </script>
 </body>
 </html>

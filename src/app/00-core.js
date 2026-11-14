@@ -8,8 +8,12 @@ const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(
 const clone = o => JSON.parse(JSON.stringify(o));
 const CLIENT = uid();
 const LS_KEY = 'carreira-ats-v1';
+// Leitura e gravação tolerantes no armazenamento do navegador (pode estar bloqueado)
+const lsGet = k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 
 let S = null;            // estado do app
 let H = [];              // semanas arquivadas
 let tab = 'painel';
-const store = { db: null, uid: null, status: 'local', loaded: false };
+// Sincronização: backend ativo (conta Claude ou servidor próprio), situação e se a primeira leitura já chegou
+const store = { backend: null, mode: 'local', uid: null, status: 'local', loaded: false };

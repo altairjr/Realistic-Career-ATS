@@ -169,12 +169,13 @@ function ajustes() {
     `Dia 1 = ${E.WEEKDAYS_FULL[s.day1Weekday].toLowerCase()} · ${s.cities.length} cidades`)}
   ${mod('Tipos de operação', 'Opções de "Especificação da operação" nos contratos.', null,
     listEditor('operation', 'Especificação da operação', 'Ex.: Dedicated Regional'), s.lists.operation.join(' · '))}
-  ${mod('Dados e sincronização', 'Seus dados ficam na sua conta e aparecem no celular e no PC.', null,
-    `<div class="full">${syncBadge()}</div>
+  ${mod('Dados e sincronização', 'Conta, instalação do app, planilha e backup.', null,
+    `${accountBlock()}${installBlock()}
      ${(L => `<div class="full">${L.row}${L.box}</div>`)(labRow('data.sheet', 'Planilha (.xlsx)'))}
      <div class="full row"><button class="btn primary" data-act="import-sheet">Importar planilha</button><button class="btn" data-act="sheet-template">Baixar modelo</button><button class="btn" data-act="export-sheet">Exportar planilha</button></div>
      ${(L => `<div class="full">${L.row}${L.box}</div>`)(labRow('data.json', 'Backup completo (.json)'))}
      <div class="full row"><button class="btn" data-act="export">Exportar JSON</button><button class="btn" data-act="import">Importar JSON</button></div>
-     <div class="full row"><button class="btn" data-act="reset-rules">Restaurar regras gerais</button><button class="btn danger" data-act="wipe">Apagar tudo</button></div>`,
-    store.status === 'on' ? 'Sincronizado na sua conta' : 'Exportar, importar ou recomeçar')}`;
+     <div class="full row"><button class="btn" data-act="reset-rules">Restaurar regras gerais</button><button class="btn danger" data-act="wipe">Apagar tudo</button></div>
+     <p class="full muted" style="margin:0;font-size:12.5px">Versão ${typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'de desenvolvimento'}</p>`,
+    dataSummary())}`;
 }

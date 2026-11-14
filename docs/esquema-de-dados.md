@@ -45,3 +45,16 @@ No fechamento de cada semana, `compact()` tira do documento principal o que tem 
 - Campos extintos são apagados (`ruleset`, `taxType`, `market` dentro do contrato, `payroll.deposit`, `lists.classification`).
 - Dados sem empresa ou contrato recebem um contrato padrão.
 - Viagens da semana em aberto sem regras gravadas recebem as regras atuais.
+
+## Servidor próprio (Supabase), desde a v0.15
+Usado quando o app roda fora do Claude com uma conta conectada. O formato do estado é o mesmo (esquema v3).
+
+| Tabela | Chave | Colunas | Conteúdo |
+|---|---|---|---|
+| `careers` | `user_id` | `state` (jsonb), `rev`, `client`, `updated_at` | O estado inteiro; `rev` = `_rev` do estado |
+| `career_weeks` | `user_id` + `week_id` | `start_day`, `data` (jsonb), `updated_at` | Uma semana arquivada por linha |
+
+- Acesso por usuário (Row Level Security): `auth.uid() = user_id`. Definição em `supabase/schema.sql`.
+- Não há o limite de 256 KiB por documento da conta Claude; a compactação continua valendo para os dois modos.
+- Chaves no navegador: `carreira-ats-v1` (dados), `carreira-ats-session` (sessão), `carreira-ats-cloud` (servidor informado na tela), `carreira-ats-linked` (conta já sincronizada com este navegador) e `carreira-ats-weekq` (semanas aguardando envio).
+

@@ -24,8 +24,9 @@ function onboarding() {
     <h2>Monte sua carreira no American</h2>
     <p>Diário de bordo, contrato com a empresa, resultado da semana, fechamento com pay lag e holerite do bruto ao líquido, com regras do mercado americano em 2026. Tudo pode ser ajustado depois.</p>
     <div class="row"><button class="btn primary" data-act="start-blank">Criar carreira</button></div>
-    <p class="muted" style="font-size:13px;margin:0">Já tem seus dados numa planilha ou num backup? Crie a carreira e depois use Ajustes › Dados e sincronização › Importar planilha (ou Importar JSON). ${syncBadge()}</p>
-  </section>`;
+    <p class="muted" style="font-size:13px;margin:0">Já tem seus dados numa planilha ou num backup? Crie a carreira e depois use Ajustes › Dados e sincronização › Importar planilha (ou Importar JSON). ${store.mode === 'claude' ? syncBadge() : ''}</p>
+  </section>
+  ${store.mode === 'claude' ? '' : `<section class="panel"><div class="mod-b" style="padding-top:14px">${cloud.session ? '' : `<p class="full" style="margin:0"><b>Já usa o app em outro aparelho?</b> Entre na conta para trazer sua carreira.</p>`}${accountBlock()}</div></section>`}`;
 }
 
 const needClose = () => S.week.trips.length && S.gameDay >= S.week.start + 7;
