@@ -180,7 +180,7 @@ async function cloudStart() {
   if (typeof render === 'function' && typeof document !== 'undefined') render();
   cloud.timer = setInterval(cloudPoll, POLL_MS);
 }
-function cloudStop() { clearInterval(cloud.timer); cloud.timer = null; store.backend = null; store.loaded = false; dirty = false; cloud.drafts = []; }
+function cloudStop() { clearInterval(cloud.timer); cloud.timer = null; store.backend = null; store.loaded = false; dirty = false; cloud.drafts = []; cloud.game = null; }
 // Confere o servidor: envia o que ficou pendente e busca o que mudou em outro aparelho.
 async function cloudPoll() {
   if (cloud.busy || !cloud.session || store.backend !== cloudBackend) return;
@@ -259,7 +259,7 @@ async function cloudFromUrl() {
    Outro programa (o leitor de telemetria) só cria rascunhos; quem decide é você, no app.
    Lançar ou descartar fica numa fila no navegador até o servidor confirmar, para funcionar offline. */
 const DRAFTQ_LS = 'carreira-ats-draftq';
-cloud.drafts = []; cloud.draftsOff = false;
+cloud.drafts = []; cloud.draftsOff = false; cloud.game = null; cloud.gameOff = false;
 const draftQ = () => lsGet(DRAFTQ_LS) || {};
 // Rascunhos já lançados ou descartados neste ou em outro aparelho (a viagem guarda o id do rascunho)
 function draftsDone() {
@@ -282,10 +282,16 @@ async function cloudDrafts() {
 }
 // Busca os rascunhos sem atrapalhar a sincronização: sem a tabela no servidor, o recurso só fica desligado
 async function refreshDrafts() {
-  const before = cloud.drafts.map(d => d.id).join();
+  const before = cloud.drafts.map(d => d.id).join() + '|' + JSON.stringify(cloud.game);
   try { await cloudDrafts(); }
   catch (e) { if (e.code === 'setup') { cloud.draftsOff = true; cloud.drafts = []; } else return; }
-  if (cloud.drafts.map(d => d.id).join() !== before && typeof onDraftsChange === 'function') onDraftsChange();
+  // situação atual do jogo (gravada pelo programa companheiro da telemetria)
+  if (!cloud.gameOff && cloud.session && store.backend === cloudBackend) {
+    try { const r = await cloudRest('game_status?select=game,online,game_time,job,truck,updated_at&' + meQ()); cloud.game = r && r[0] ? r[0] : null; }
+    catch (e) { if (e.code === 'setup') { cloud.gameOff = true; cloud.game = null; } }
+  }
+  if (typeof onGameStatus === 'function') onGameStatus();
+  if (cloud.drafts.map(d => d.id).join() + '|' + JSON.stringify(cloud.game) !== before && typeof onDraftsChange === 'function') onDraftsChange();
 }
 async function resolveDraft(id, status, tripId) {
   const q = draftQ(); q[id] = { status, tripId: tripId || null }; lsSet(DRAFTQ_LS, q);

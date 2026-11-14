@@ -1,0 +1,38 @@
+# Compila o plugin de telemetria (DLL para Windows 64 bits) com o SDK oficial da SCS.
+# Roda quando o código do plugin muda ou pelo botão "Run workflow" (aba Actions).
+# A DLL fica em "Artifacts", no fim da página da execução.
+name: telemetria
+on:
+  push:
+    paths: ['telemetry/plugin/**', '.github/workflows/telemetria.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  dll:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Baixar o SDK oficial da SCS (1.16)
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://download.eurotrucksimulator2.com/scs_sdk_1_16.zip -OutFile sdk.zip
+          Expand-Archive sdk.zip -DestinationPath sdk
+          $h = Get-ChildItem sdk -Recurse -Filter scssdk_telemetry.h | Select-Object -First 1
+          if (-not $h) { throw 'scssdk_telemetry.h não encontrado no SDK' }
+          "SDK_INC=$($h.DirectoryName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Compilar a DLL (Visual C++, 64 bits)
+        shell: cmd
+        run: |
+          for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do set VS=%%i
+          call "%VS%\VC\Auxiliary\Build\vcvars64.bat" || exit /b 1
+          mkdir saida
+          cl /nologo /std:c++17 /O2 /EHsc /MT /LD /utf-8 /W3 /I "%SDK_INC%" telemetry\plugin\carreira_telemetria.cpp /Fo:saida\ /Fe:saida\carreira-telemetria.dll || exit /b 1
+          dumpbin /exports saida\carreira-telemetria.dll > saida\exports.txt
+          type saida\exports.txt
+          findstr /c:"scs_telemetry_init" saida\exports.txt || (echo A DLL nao exporta scs_telemetry_init & exit /b 1)
+          findstr /c:"scs_telemetry_shutdown" saida\exports.txt || (echo A DLL nao exporta scs_telemetry_shutdown & exit /b 1)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: carreira-telemetria-dll
+          path: saida/carreira-telemetria.dll

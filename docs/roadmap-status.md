@@ -1,4 +1,4 @@
-# Roadmap — onde estamos (v0.18, nov/2026)
+# Roadmap — onde estamos (v0.19, nov/2026)
 
 | Fase | Objetivo | Status |
 |---|---|---|
@@ -6,7 +6,7 @@
 | 1 | App em HTML | ✅ Concluída |
 | 1b | Revisão para escalar (código, dados, regras dos EUA) | ✅ Concluída |
 | 2 | Celular + sincronização | ✅ Concluída (site publicado, app instalável, login e sincronização) |
-| 3 | Integração com o jogo (telemetria) | 🟡 Base pronta (rascunhos); falta o leitor do jogo |
+| 3 | Integração com o jogo (telemetria) | 🟡 Implementada; falta o primeiro teste no jogo de verdade |
 | 4 | Overlay sobre o jogo | ⬜ Não iniciada |
 | 5 | Carreira avançada | 🟡 Boa parte entregue |
 
@@ -69,21 +69,28 @@
 - Link de e-mail de outra conta só é aceito com confirmação; limites de tamanho e permissões revisadas no `schema.sql`; `.gitignore` bloqueia planilhas, backups e `.env`.
 - Guia `seguranca.md` com o que pode e o que não pode ficar público.
 
-### Preparação da fase 3 (v0.18, esta versão)
+### Preparação da fase 3 (v0.18)
 - **Viagens do jogo**: tabela `trip_drafts` e caixa de entrada no app. O leitor de telemetria só cria rascunhos; você lança (formulário já preenchido) ou descarta. Funciona offline e entre aparelhos. Formato em `telemetria.md`.
 - **Ferramenta de teste**: `tools/enviar-rascunho.mjs` envia uma entrega de exemplo para a sua conta.
 - **Testes no navegador no repositório**: 5 testes (telas, planilha, dois aparelhos, offline, atualização, viagens do jogo) rodando no GitHub antes de cada publicação. Total: 37 automáticos + 5 no navegador.
 - **Supabase configurado**: cadastro fechado, senha mínima de 8, `schema.sql` aplicado, senha do banco trocada; celular confirmado.
 
+### Fase 3 — Telemetria (v0.19, esta versão)
+- **Plugin do jogo** (C++, SDK oficial 1.16 da SCS): grava trabalho, entregas, multas, pedágios, balsas, trens, abastecimentos, dia do jogo, odômetro e minutos dirigidos. Compilado pelo GitHub (workflow `telemetria`).
+- **Programa companheiro** (Node): lê o arquivo do plugin, envia cada entrega como rascunho e a situação do jogo para a conta; login salvo no PC, fila offline, sem duplicar, modo diagnóstico.
+- **App**: cartão "No jogo agora" (dia, caminhão, trabalho em andamento), dia do app ligado ao dia do jogo, rascunhos já no dia certo.
+- **Testes**: sessão de jogo simulada compilada com o plugin → companheiro → servidor de teste; 40 testes automáticos e 6 no navegador.
+- Guia de instalação e limites em `telemetria.md`.
+
 ### Fase 5 — parte já feita
 - 5 classificações com predefinições; fixo, hora, CPM e percentual; jornada FMCSA; empréstimo; renome; bônus de segurança; experiência e CPM sugerido; status migratório; custos de owner-operator.
 
 ## Etapas que faltam
-### Fase 3 — Telemetria do ATS
-- **Fonte dos dados**: o SDK de telemetria da SCS (plugin `.dll` carregado pelo jogo). As versões recentes do SDK trazem eventos de jogo, como entrega concluída (frete, distância, dano da carga), multa, pedágio e abastecimento, que cobrem quase todos os campos de uma viagem. Confirmar no SDK atual antes de começar.
-- **Leitor no PC**: plugin próprio ou um plugin da comunidade que já exponha esses eventos, mais um programa pequeno que fica aberto junto do jogo, entra na mesma conta e envia cada entrega.
-- ~~Rascunhos~~: pronto na v0.18.
-- **Regras com horário real**: 10h de folga entre turnos e restart de 34h exatos, com o relógio do jogo.
+### Fase 3 — o que falta
+- **Primeiro teste no jogo de verdade**: compilar a DLL no GitHub, instalar, jogar uma entrega com `--diagnostico` e conferir nomes e valores.
+- Valor do combustível (o SDK dá litros; falta o preço pago).
+- Programa companheiro com ícone e início automático (hoje é uma janela de terminal); depois, junto com o overlay da fase 4.
+- 10h de folga entre turnos e restart de 34h exatos usando o relógio do jogo.
 
 ### Fase 4 — Overlay
 - Janela transparente sempre por cima, por atalho de teclado, com o jogo em "janela sem borda".
@@ -99,8 +106,9 @@
 - **ETS2**: o nome do projeto já prevê o Euro Truck Simulator 2. Exige outro conjunto de regras (euro, tacógrafo da UE, impostos europeus), aproveitando o mesmo motor e a mesma telemetria.
 
 ## Próxima etapa de implementação
-**Fase 3a — prova de conceito do leitor do jogo:**
-1. Confirmar no SDK de telemetria atual da SCS quais eventos chegam na entrega e com quais campos.
-2. Escolher entre plugin próprio e um plugin da comunidade.
-3. Gravar as entregas de uma sessão de jogo num arquivo e comparar com o lançamento manual.
-4. Programa companheiro que entra na conta e envia cada entrega como rascunho (`telemetria.md`).
+**Teste da telemetria no jogo (fase 3, validação):**
+1. Rodar o workflow `telemetria` no GitHub e baixar a DLL.
+2. Instalar no ATS, abrir o programa companheiro com `--diagnostico` e fazer uma entrega.
+3. Conferir no app o cartão "No jogo agora" e o rascunho; ajustar `core.mjs` se algum nome do SDK vier diferente.
+
+Depois: **Fase 4 — overlay** (janela por cima do jogo), que também substitui a janela de terminal do programa companheiro.
