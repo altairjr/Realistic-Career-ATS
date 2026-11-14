@@ -7,6 +7,12 @@ import { createHash } from 'node:crypto';
 const version = JSON.parse(readFileSync('package.json', 'utf8')).version;
 const shell = readFileSync('src/shell.html', 'utf8');
 const config = readFileSync('src/config.js', 'utf8');
+// Proteção: chave secreta nunca pode ir para o app (ele é público)
+const keyIn = (config.match(/key:\s*'([^']*)'/) || [])[1] || '';
+const role = (() => { try { return JSON.parse(Buffer.from(keyIn.split('.')[1], 'base64url').toString()).role; } catch (e) { return null; } })();
+if (/^sb_secret_/.test(keyIn) || role === 'service_role') throw new Error('src/config.js tem a chave SECRETA do Supabase. Use a chave publicável (sb_publishable_...).');
+const cloudUrl = (config.match(/url:\s*'([^']*)'/) || [])[1] || '';
+const cloudOrigin = (() => { try { return new URL(cloudUrl).origin; } catch (e) { return ''; } })();
 const engine = readFileSync('src/engine.js', 'utf8').replace(/^if \(typeof module.*$/m, '');
 // Os módulos são scripts clássicos que compartilham o escopo global; a ordem é a do nome do arquivo.
 const modules = readdirSync('src/app').filter(f => f.endsWith('.js')).sort();
@@ -28,12 +34,21 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   });
 }
 </script>`;
+// Política de conteúdo: o app só conversa com o próprio site, com o servidor de sincronização e com as fontes do Google.
+// Com o servidor gravado em src/config.js, só ele é aceito; sem ele, qualquer https (o servidor é informado na tela).
+const csp = [
+  "default-src 'self'", "script-src 'self' 'unsafe-inline'", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com", "img-src 'self' data: blob:", `connect-src 'self' ${cloudOrigin || 'https:'}`,
+  "worker-src 'self'", "manifest-src 'self'", "object-src 'none'", "base-uri 'none'", "form-action 'none'"
+].join('; ');
 const html = `<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="description" content="Carreira realista para American Truck Simulator: diário de bordo, contratos, resultado da semana e holerite.">
+<meta http-equiv="Content-Security-Policy" content="${csp}">
+<meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#0d6a3c">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">

@@ -21,6 +21,12 @@ create table if not exists public.career_weeks (
   primary key (user_id, week_id)
 );
 
+-- Limites de tamanho: impedem que alguém use o banco para guardar arquivos grandes.
+alter table public.careers      drop constraint if exists careers_tamanho;
+alter table public.careers      add  constraint careers_tamanho check (pg_column_size(state) < 2000000);
+alter table public.career_weeks drop constraint if exists career_weeks_tamanho;
+alter table public.career_weeks add  constraint career_weeks_tamanho check (pg_column_size(data) < 500000 and length(week_id) <= 64);
+
 -- Cada usuário só enxerga e altera as próprias linhas (Row Level Security).
 alter table public.careers      enable row level security;
 alter table public.career_weeks enable row level security;
@@ -39,4 +45,5 @@ create policy "career_weeks: dono" on public.career_weeks
 
 -- Só quem está logado acessa; visitantes sem login não leem nem gravam nada.
 revoke all on public.careers, public.career_weeks from anon;
+revoke all on public.careers, public.career_weeks from authenticated;
 grant select, insert, update, delete on public.careers, public.career_weeks to authenticated;

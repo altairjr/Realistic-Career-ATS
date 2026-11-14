@@ -1,4 +1,6 @@
-# App instalável e sincronização própria (v0.15)
+# App instalável e sincronização própria (v0.17)
+
+> Este repositório já vem ligado ao servidor do projeto (`src/config.js`): o app publicado abre pedindo só e-mail e senha. Para usar outro servidor, troque os dois valores de `src/config.js`. Regras de segurança em `seguranca.md`.
 
 O app tem três formas de guardar os dados. Ele escolhe sozinho:
 
@@ -35,7 +37,7 @@ Depois de aberto uma vez, o app abre sem internet. Com internet, ele busca a ver
    - **Só neste navegador:** em *Ajustes › Dados e sincronização*, preencha *Endereço do servidor* e *Chave publicável* e toque em *Salvar servidor*.
 6. No app, toque em **Criar conta**. Nos outros aparelhos, use **Entrar** com o mesmo e-mail e senha.
 
-Opcional, para uso pessoal:
+Recomendado (detalhes em `seguranca.md`):
 - **Sem confirmação de e-mail:** em *Authentication › Sign In / Providers › Email*, desligue *Confirm email*. A conta já entra ao ser criada.
 - **Fechar o cadastro:** depois de criar a sua conta, desligue *Allow new users to sign up* para ninguém mais criar conta no seu servidor.
 

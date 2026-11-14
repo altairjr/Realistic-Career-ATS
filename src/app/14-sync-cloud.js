@@ -244,6 +244,10 @@ async function cloudFromUrl() {
   if (!cloudCfg() || !p.get('access_token')) return null;
   try {
     const user = await cloudHttp('/auth/v1/user', { token: p.get('access_token') });
+    // Um link pode ter sido enviado por outra pessoa: só entra na conta do link depois de confirmar qual é
+    const cur = lsGet(SESSION_LS);
+    if (!(cur && cur.user && cur.user.id === user.id) && typeof confirmBox === 'function' &&
+      !await confirmBox('Entrar com este link?', `O link é da conta <b>${esc(user.email || 'sem e-mail')}</b>. Só continue se essa conta for sua e se você abriu o link do seu próprio e-mail.`, 'Entrar')) return null;
     cloudSetSession({ access_token: p.get('access_token'), refresh_token: p.get('refresh_token'), expires_in: +p.get('expires_in') || 3600, user });
     return { type: p.get('type') || 'signup' };
   } catch (e) { return { error: e.message }; }

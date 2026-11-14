@@ -5,6 +5,6 @@
    NUNCA coloque aqui a chave secreta (sb_secret_... ou service_role).
    Vazio = o app pergunta o servidor em Ajustes › Dados e sincronização. */
 const CLOUD_CONFIG = {
-  url: '',   // ex.: 'https://abcdefghijkl.supabase.co'
-  key: ''    // ex.: 'sb_publishable_...'
+  url: 'https://tjaplchckxsiraouzqtz.supabase.co',
+  key: 'sb_publishable_JeaaGtd1YBcTltujOzqV5g_PfCtsMm5'
 };
