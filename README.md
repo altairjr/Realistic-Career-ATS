@@ -34,6 +34,7 @@ src/
     62-sheet-io.js     Importação e exportação no modelo da planilha
     70-dialogs.js      Janelas: nova carreira, viagem, fechamento, backup
     90-main.js         Eventos e inicialização
+telemetry/           Telemetria do jogo: plugin (DLL) e programa companheiro
 public/              Manifesto, ícones e service worker do app instalável
 supabase/schema.sql  Tabelas e regras de acesso do servidor de sincronização
 tools/               Gerador do modelo da planilha e envio de viagem de teste (enviar-rascunho.mjs)
@@ -43,12 +44,16 @@ tests/               Testes do motor, do estado e da sincronização (com servid
 docs/                Regras de cálculo, esquema de dados, sincronização, roadmap e fontes
 ```
 
+## Telemetria do jogo
+O app pode ler o ATS enquanto você joga: dia atual, trabalho em andamento e entregas concluídas. Instalação e detalhes em `docs/telemetria.md`.
+
 ## Desenvolvimento
 Requer Node.js 18 ou mais novo. Não há dependências externas.
 ```bash
-npm test            # 37 testes do motor, do estado e da sincronização
+npm test            # 40 testes: motor, estado, sincronização e telemetria
 npm run e2e:instalar  # uma vez: baixa o Playwright e o Chromium para os testes no navegador
-npm run test:e2e    # 5 testes no navegador: telas, planilha, dois aparelhos, offline, atualização, viagens do jogo
+npm run test:e2e    # 6 testes no navegador: telas, planilha, dois aparelhos, offline, atualização, viagens e situação do jogo
+npm run telemetria  # programa companheiro da telemetria (deixe aberto enquanto joga)
 npm run build   # gera dist/ a partir de src/ e public/
 ```
 Edite os arquivos em `src/` e rode o build. Não edite `dist/index.html` direto.

@@ -4,7 +4,7 @@ const http = require('node:http');
 const crypto = require('node:crypto');
 
 function createMock(opt = {}) {
-  const db = { users: new Map(), access: new Map(), refresh: new Map(), careers: new Map(), weeks: new Map(), drafts: new Map() };
+  const db = { users: new Map(), access: new Map(), refresh: new Map(), careers: new Map(), weeks: new Map(), drafts: new Map(), status: new Map() };
   const flags = { offline: false, noTables: false, noDrafts: false, confirmEmail: !!opt.confirmEmail, requests: 0 };
   const rid = () => crypto.randomBytes(12).toString('hex');
   const session = user => {
@@ -53,11 +53,11 @@ function createMock(opt = {}) {
         if (path === '/auth/v1/logout') { db.access.delete(bearer); return send(204); }
       }
       // Tabelas: mesma lógica do PostgREST para o que o app usa (filtros eq, ordem, upsert, update, delete) com RLS por usuário
-      const table = { '/rest/v1/careers': 'careers', '/rest/v1/career_weeks': 'weeks', '/rest/v1/trip_drafts': 'drafts' }[path];
+      const table = { '/rest/v1/careers': 'careers', '/rest/v1/career_weeks': 'weeks', '/rest/v1/trip_drafts': 'drafts', '/rest/v1/game_status': 'status' }[path];
       if (table) {
-        if (flags.noTables || (table === 'drafts' && flags.noDrafts)) return send(404, { code: 'PGRST205', message: "Could not find the table in the schema cache" });
+        if (flags.noTables || (table === 'drafts' && flags.noDrafts) || (table === 'status' && flags.noStatus)) return send(404, { code: 'PGRST205', message: "Could not find the table in the schema cache" });
         if (!user) return send(401, { code: 'PGRST303', message: 'JWT expired' });
-        const keyOf = r => table === 'careers' ? r.user_id : table === 'weeks' ? r.user_id + '/' + r.week_id : r.id;
+        const keyOf = r => table === 'careers' || table === 'status' ? r.user_id : table === 'weeks' ? r.user_id + '/' + r.week_id : r.id;
         const meta = new Set(['select', 'order', 'on_conflict']);
         const match = [...db[table].values()].filter(r => r.user_id === uid && [...q.entries()].every(([k, v]) => meta.has(k) || String(r[k]) === v.replace(/^eq\./, '')));
         if (req.method === 'GET') {

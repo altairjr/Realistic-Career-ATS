@@ -38,11 +38,24 @@ create table if not exists public.trip_drafts (
 );
 create index if not exists trip_drafts_novos on public.trip_drafts (user_id, created_at) where status = 'new';
 
+-- Situação atual do jogo, gravada pelo programa companheiro da telemetria: dia do jogo e trabalho em andamento.
+create table if not exists public.game_status (
+  user_id    uuid primary key default auth.uid() references auth.users (id) on delete cascade,
+  game       text not null default 'ats',
+  online     boolean not null default false,
+  game_time  integer,
+  job        jsonb,
+  truck      text,
+  updated_at timestamptz not null default now()
+);
+
 -- Limites de tamanho: impedem que alguém use o banco para guardar arquivos grandes.
 alter table public.careers      drop constraint if exists careers_tamanho;
 alter table public.careers      add  constraint careers_tamanho check (pg_column_size(state) < 2000000);
 alter table public.career_weeks drop constraint if exists career_weeks_tamanho;
 alter table public.career_weeks add  constraint career_weeks_tamanho check (pg_column_size(data) < 500000 and length(week_id) <= 64);
+alter table public.game_status  drop constraint if exists game_status_regras;
+alter table public.game_status  add  constraint game_status_regras check (pg_column_size(job) < 5000 and game in ('ats', 'ets2') and (truck is null or length(truck) <= 120));
 alter table public.trip_drafts  drop constraint if exists trip_drafts_regras;
 alter table public.trip_drafts  add  constraint trip_drafts_regras check (
   pg_column_size(data) < 20000 and length(event_id) <= 128 and length(source) <= 40 and game in ('ats', 'ets2')
@@ -51,6 +64,7 @@ alter table public.trip_drafts  add  constraint trip_drafts_regras check (
 -- Cada usuário só enxerga e altera as próprias linhas (Row Level Security).
 alter table public.careers      enable row level security;
 alter table public.trip_drafts  enable row level security;
+alter table public.game_status  enable row level security;
 alter table public.career_weeks enable row level security;
 
 drop policy if exists "careers: dono" on public.careers;
@@ -65,6 +79,12 @@ create policy "career_weeks: dono" on public.career_weeks
   using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
 
+drop policy if exists "game_status: dono" on public.game_status;
+create policy "game_status: dono" on public.game_status
+  for all to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
 drop policy if exists "trip_drafts: dono" on public.trip_drafts;
 create policy "trip_drafts: dono" on public.trip_drafts
   for all to authenticated
@@ -72,6 +92,6 @@ create policy "trip_drafts: dono" on public.trip_drafts
   with check ((select auth.uid()) = user_id);
 
 -- Só quem está logado acessa; visitantes sem login não leem nem gravam nada.
-revoke all on public.careers, public.career_weeks, public.trip_drafts from anon;
-revoke all on public.careers, public.career_weeks, public.trip_drafts from authenticated;
-grant select, insert, update, delete on public.careers, public.career_weeks, public.trip_drafts to authenticated;
+revoke all on public.careers, public.career_weeks, public.trip_drafts, public.game_status from anon;
+revoke all on public.careers, public.career_weeks, public.trip_drafts, public.game_status from authenticated;
+grant select, insert, update, delete on public.careers, public.career_weeks, public.trip_drafts, public.game_status to authenticated;

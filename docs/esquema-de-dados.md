@@ -53,10 +53,12 @@ Usado quando o app roda fora do Claude com uma conta conectada. O formato do est
 |---|---|---|---|
 | `careers` | `user_id` | `state` (jsonb), `rev`, `client`, `updated_at` | O estado inteiro; `rev` = `_rev` do estado |
 | `career_weeks` | `user_id` + `week_id` | `start_day`, `data` (jsonb), `updated_at` | Uma semana arquivada por linha |
+| `game_status` (v0.19) | `user_id` | `game`, `online`, `game_time`, `job` (jsonb), `truck`, `updated_at` | Situação atual do jogo (telemetria) |
 | `trip_drafts` (v0.18) | `id`; único por `user_id` + `event_id` | `source`, `game`, `data` (jsonb), `status`, `trip_id`, `created_at`, `resolved_at` | Viagens vindas do jogo, à espera de revisão (formato em `telemetria.md`) |
 
 - Acesso por usuário (Row Level Security): `auth.uid() = user_id`. Definição em `supabase/schema.sql`.
 - Não há o limite de 256 KiB por documento da conta Claude; a compactação continua valendo para os dois modos.
 - Chaves no navegador: `carreira-ats-v1` (dados), `carreira-ats-session` (sessão), `carreira-ats-cloud` (servidor informado na tela), `carreira-ats-linked` (conta já sincronizada com este navegador), `carreira-ats-weekq` (semanas aguardando envio) e `carreira-ats-draftq` (rascunhos lançados ou descartados aguardando envio).
-- Viagens lançadas a partir de um rascunho guardam `draftId`.
+- Viagens lançadas a partir de um rascunho guardam `draftId` (e `gameDay`, o dia do jogo).
+- `settings.telemetry.offset`: diferença entre o dia do app e o dia do jogo quando o dia está ligado ao jogo (`null` = desligado).
 

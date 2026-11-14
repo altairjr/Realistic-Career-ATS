@@ -219,3 +219,30 @@ test('viagens do jogo: o rascunho aparece no Painel, é lançado pelo formulári
   assert.deepEqual(page.errors, []);
   await ctx.close();
 });
+
+test('situação do jogo: cartão no Painel, dia do app ligado ao jogo e rascunho no dia certo', { skip }, async () => {
+  const [email, pass] = newAccount();
+  const { ctx, page } = await device({ width: 360, height: 760 });
+  await openApp(page); await createCareer(page); await login(page, email, pass, true);
+  const uid = mock.db.users.get(email).id;
+  const setStatus = (minutes, job) => mock.db.status.set(uid, { user_id: uid, game: 'ats', online: true, game_time: minutes, truck: 'Kenworth T680', updated_at: new Date().toISOString(), job });
+  setStatus(10 * 1440 + 600, { cargo: 'Madeira', origin: 'Reno', dest: 'Elko', plannedMiles: 290, income: 3100, deadline: 11 * 1440 });
+  await page.click('[data-tab="painel"]'); await page.evaluate(() => cloudPoll());
+  await page.waitForSelector('text=Dia 11 no jogo');
+  assert.match(await page.locator('section', { hasText: 'No jogo agora' }).first().innerText(), /Madeira[\s\S]*Reno → Elko/);
+  await shot(page, 'jogo-cartao');
+  // liga o dia: app no dia 1, jogo no dia 11
+  await page.click('[data-act="tel-link"]'); await page.click('#modalRoot [data-ok]');
+  await page.waitForFunction(() => S.settings.telemetry && S.settings.telemetry.offset === -10);
+  // o jogo vira para o dia 13: o app vai para o dia 3 sozinho
+  setStatus(12 * 1440 + 30, null); await page.evaluate(() => cloudPoll());
+  await page.waitForFunction(() => S.gameDay === 3);
+  assert.equal(await page.locator('#dayNum').innerText(), '3');
+  // rascunho do dia 13 do jogo abre no dia 3 do app
+  const d = mock.addDraft(email, { origin: 'Reno', dest: 'Elko', miles: 290, freight: 3100, gameDay: 13 });
+  await page.evaluate(() => cloudPoll()); await page.click('[data-act="drafts"]'); await page.click(`[data-duse="${d.id}"]`);
+  assert.equal(await page.inputValue('#t_day'), '3');
+  await page.click('[data-save]'); await page.waitForFunction(() => S.week.trips.length === 1);
+  assert.deepEqual(page.errors, []);
+  await ctx.close();
+});
