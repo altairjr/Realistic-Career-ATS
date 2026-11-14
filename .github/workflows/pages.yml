@@ -21,6 +21,10 @@ jobs:
         with:
           node-version: 20
       - run: npm test
+      # testes no navegador (Chromium): telas, planilha, dois aparelhos, offline, atualização e viagens do jogo
+      - run: npm install --no-save playwright@1.63.0
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

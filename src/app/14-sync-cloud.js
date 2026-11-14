@@ -172,6 +172,7 @@ async function cloudStart() {
     }
     lsSet(LINK_LS, store.uid);
     if (store.status === 'loading') setSync('on');
+    await refreshDrafts();
   } catch (e) {
     handleDbError(e);
     if (e.code === 'auth') { store.backend = null; return; }
@@ -179,7 +180,7 @@ async function cloudStart() {
   if (typeof render === 'function' && typeof document !== 'undefined') render();
   cloud.timer = setInterval(cloudPoll, POLL_MS);
 }
-function cloudStop() { clearInterval(cloud.timer); cloud.timer = null; store.backend = null; store.loaded = false; dirty = false; }
+function cloudStop() { clearInterval(cloud.timer); cloud.timer = null; store.backend = null; store.loaded = false; dirty = false; cloud.drafts = []; }
 // Confere o servidor: envia o que ficou pendente e busca o que mudou em outro aparelho.
 async function cloudPoll() {
   if (cloud.busy || !cloud.session || store.backend !== cloudBackend) return;
@@ -196,6 +197,7 @@ async function cloudPoll() {
     else if (rev !== null && rev > mine) { const row = await cloudLoadMain(); if (row && !dirty) await cloudPullAll(row); }
     else await cloudSyncWeeks();
     if (!dirty && ['err', 'setup', 'loading'].includes(store.status)) setSync('on');
+    await refreshDrafts();
   } catch (e) { handleDbError(e); if (e.code === 'auth') cloudStop(); }
   finally { cloud.busy = false; }
 }
@@ -251,4 +253,42 @@ async function cloudFromUrl() {
     cloudSetSession({ access_token: p.get('access_token'), refresh_token: p.get('refresh_token'), expires_in: +p.get('expires_in') || 3600, user });
     return { type: p.get('type') || 'signup' };
   } catch (e) { return { error: e.message }; }
+}
+
+/* --- Rascunhos de viagem vindos do jogo (tabela trip_drafts) ---
+   Outro programa (o leitor de telemetria) só cria rascunhos; quem decide é você, no app.
+   Lançar ou descartar fica numa fila no navegador até o servidor confirmar, para funcionar offline. */
+const DRAFTQ_LS = 'carreira-ats-draftq';
+cloud.drafts = []; cloud.draftsOff = false;
+const draftQ = () => lsGet(DRAFTQ_LS) || {};
+// Rascunhos já lançados ou descartados neste ou em outro aparelho (a viagem guarda o id do rascunho)
+function draftsDone() {
+  const ids = new Set(Object.keys(draftQ()));
+  if (S) [...S.week.trips, ...H.flatMap(w => w.trips || [])].forEach(t => { if (t.draftId) ids.add(t.draftId); });
+  return ids;
+}
+async function cloudDrafts() {
+  if (cloud.draftsOff || !cloud.session || store.backend !== cloudBackend) return cloud.drafts;
+  // primeiro envia o que ficou pendente
+  const q = draftQ();
+  for (const id of Object.keys(q)) {
+    await cloudRest(`trip_drafts?id=eq.${encodeURIComponent(id)}&${meQ()}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: { status: q[id].status, trip_id: q[id].tripId || null, resolved_at: new Date().toISOString() } });
+    const now = draftQ(); delete now[id]; lsSet(DRAFTQ_LS, Object.keys(now).length ? now : null);
+  }
+  const rows = await cloudRest('trip_drafts?select=id,created_at,source,data&status=eq.new&order=created_at.asc&' + meQ());
+  const done = draftsDone();
+  cloud.drafts = (rows || []).filter(r => r && r.data && !done.has(r.id));
+  return cloud.drafts;
+}
+// Busca os rascunhos sem atrapalhar a sincronização: sem a tabela no servidor, o recurso só fica desligado
+async function refreshDrafts() {
+  const before = cloud.drafts.map(d => d.id).join();
+  try { await cloudDrafts(); }
+  catch (e) { if (e.code === 'setup') { cloud.draftsOff = true; cloud.drafts = []; } else return; }
+  if (cloud.drafts.map(d => d.id).join() !== before && typeof onDraftsChange === 'function') onDraftsChange();
+}
+async function resolveDraft(id, status, tripId) {
+  const q = draftQ(); q[id] = { status, tripId: tripId || null }; lsSet(DRAFTQ_LS, q);
+  cloud.drafts = cloud.drafts.filter(d => d.id !== id);
+  try { await cloudDrafts(); } catch (e) {}   // sem conexão: fica na fila e vai na próxima verificação
 }

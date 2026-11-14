@@ -46,7 +46,7 @@ function painel() {
   const ready = S.payroll.filter(p => p.status !== 'paid' && p.payday <= S.gameDay);
   const readyB = ready.length ? `<div class="banner"><div><b>${ready.length === 1 ? 'Um holerite está' : ready.length + ' holerites estão'} disponível${ready.length === 1 ? '' : 'is'}.</b><div class="muted" style="font-size:13.5px">${fmt(ready.reduce((a, p) => a + p.amount, 0))} para depositar no saldo.</div></div><button class="btn primary" data-act="pay-ready">Receber</button></div>` : '';
   const visaB = S.profile.visa === 'other' ? (h => `<div class="banner"><div style="flex:1;min-width:0"><div class="lab-row" style="justify-content:flex-start"><b>CDL não-domiciliada restrita.</b>${h.btn}</div><div class="muted" style="font-size:13.5px">Desde 15/03/2026, a FMCSA só emite CDL não-domiciliada para vistos H-2A, H-2B e E-2. Ajuste o status em Carreira › Motorista.</div>${h.box}</div></div>`)(bh('ui.visto', 'CDL')) : '';
-  return `${banner}${negB}${violB}${readyB}${visaB}
+  return `${draftsBanner()}${banner}${negB}${violB}${readyB}${visaB}
   <div class="stats two">
     <div class="panel stat">${eyeH('ui.receber', 'A receber')}<div class="v">${fmt(pendingPay(S))}</div><div class="s">${next ? 'Próximo: ' + dayFull(next.payday) : 'Nenhum holerite pendente'}</div></div>
     <div class="panel stat">${eyeH('ui.totalsaldo', 'Total com saldo')}<div class="v">${fmt(balance(S) + pendingPay(S))}</div><div class="s">Saldo + holerites pendentes</div></div>
