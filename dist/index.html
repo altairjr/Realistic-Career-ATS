@@ -324,7 +324,7 @@ textarea{width:100%;min-height:140px;border:1px solid var(--line);background:var
 <div id="toastRoot"></div>
 
 <script>
-const APP_VERSION = '0.16.0';
+const APP_VERSION = '0.16.1';
 /* Servidor de sincronização (Supabase). Opcional.
    Preencha com os dados do SEU projeto (Settings › API Keys) e rode o build.
    A chave publicável (sb_publishable_...) pode ficar no código: quem protege os dados
@@ -3889,7 +3889,17 @@ cloudFromUrl().then(async r => {
 
 </script>
 <script>
-if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  const had = !!navigator.serviceWorker.controller; let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !reloaded) { reloaded = true; location.reload(); } });
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+      const check = () => reg.update().catch(() => {});
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+      setInterval(check, 30 * 60 * 1000);
+    }).catch(() => {});
+  });
+}
 </script>
 </body>
 </html>

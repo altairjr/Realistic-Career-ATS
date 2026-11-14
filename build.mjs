@@ -14,8 +14,19 @@ const app = modules.map(f => readFileSync(`src/app/${f}`, 'utf8')).join('\n');
 const body = `${shell}\n<script>\nconst APP_VERSION = '${version}';\n${config}\n${engine}\n${app}\n</script>\n`;
 
 // Só a versão hospedada registra o service worker (dentro do Claude e em file:// ele não existe).
+// Versão nova publicada: o service worker novo assume e a página recarrega uma vez sozinha.
 const swRegister = `<script>
-if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  const had = !!navigator.serviceWorker.controller; let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !reloaded) { reloaded = true; location.reload(); } });
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+      const check = () => reg.update().catch(() => {});
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+      setInterval(check, 30 * 60 * 1000);
+    }).catch(() => {});
+  });
+}
 </script>`;
 const html = `<!doctype html>
 <html lang="pt-BR">
@@ -44,7 +55,8 @@ writeFileSync('dist/index.html', html);
 // Arquivos do app instalável. O service worker recebe uma marca do conteúdo: mudou o app, renova o cache.
 cpSync('public', 'dist', { recursive: true });
 const stamp = version + '-' + createHash('sha256').update(html).digest('hex').slice(0, 8);
-writeFileSync('dist/sw.js', readFileSync('public/sw.js', 'utf8').replace('__BUILD__', stamp));
+writeFileSync('dist/sw.js', readFileSync('public/sw.js', 'utf8').replaceAll('__BUILD__', stamp));
+if (readFileSync('dist/sw.js', 'utf8').includes('__BUILD__')) throw new Error('sw.js ficou sem a marca de versão');
 console.log(`dist/ gerado: v${version} (${modules.length} módulos, index.html com ${(html.length / 1024).toFixed(0)} KB, cache ${stamp})`);
 
 const i = process.argv.indexOf('--artifact');

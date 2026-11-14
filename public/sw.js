@@ -1,15 +1,16 @@
 /* Service worker: deixa o app abrir sem internet.
-   - Página: tenta a rede primeiro (para pegar atualizações) e cai para a cópia guardada se estiver offline ou lento.
+   - Página: tenta a rede primeiro (sempre sem o cache do navegador, para pegar a versão nova) e cai para a cópia guardada se estiver offline ou lento.
    - Ícones e manifesto: cópia guardada primeiro.
    - Fontes do Google: cópia guardada, atualizada em segundo plano.
    - Chamadas ao servidor de sincronização nunca passam por aqui.
-   __BUILD__ é trocado pelo build a cada versão, o que renova o cache. */
+   A marca de versão (no nome do cache abaixo) é trocada pelo build a cada versão, o que renova o cache. */
 const CACHE = 'carreira-ats-__BUILD__';
 const FONTS = 'carreira-ats-fontes';
 const SHELL = ['./', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // cache: 'reload' busca no servidor, ignorando a cópia de até 10 min que o GitHub Pages deixa no navegador
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
@@ -26,7 +27,7 @@ self.addEventListener('fetch', e => {
     if (req.mode === 'navigate') {
       e.respondWith((async () => {
         const cache = await caches.open(CACHE);
-        try { const res = await timeout(4000, fetch(req)); if (res.ok) cache.put('./', res.clone()); return res; }
+        try { const res = await timeout(4000, fetch(req.url, { cache: 'no-store', credentials: 'same-origin' })); if (res.ok) cache.put('./', res.clone()); return res; }
         catch (x) { return (await cache.match('./')) || Response.error(); }
       })());
       return;
