@@ -52,12 +52,14 @@ function newCareerFlow() {
   });
 }
 
-function openTrip(id) {
+// prefill: campos que já vêm preenchidos (rascunho vindo do jogo); onSaved: chamado com a viagem lançada
+function openTrip(id, prefill = null, onSaved = null) {
   const s = SS();
   const editing = id ? S.week.trips.find(t => t.id === id) : null;
   const last = S.week.trips.slice().sort((a, b) => a.day - b.day).at(-1);
   const garage = ((companyOf(activeContract()) || {}).hq || '').split('/')[0].trim();
   const t = editing ? clone(editing) : { id: uid(), day: S.gameDay, type: 'company', origin: last ? last.dest : garage, dest: '', status: 'Excelente', miles: '', freight: '', bonus: 0, hours: 0, drive: 0, brk: false, away: isOtrOp(), detention: 0, stops: 0, layover: 0, breakdown: 0, tarp: false, fuel: 0, tolls: 0, breakfast: 0, lunch: 0, dinner: 0, hotel: 0, fines: 0, damage: 0, contractId: S.currentContractId };
+  if (prefill && !editing) Object.assign(t, prefill);
   if (!s.borrowed.on && !editing) t.type = 'company';
   // regras congeladas na viagem: contrato, regra do carro, quem paga e frete de mercado
   if (!t.contract && (!editing || t.type !== 'borrowed')) Object.assign(t, E.snapshotFor('company', s));
@@ -87,7 +89,7 @@ function openTrip(id) {
     ${(L => L.row + L.box)(LB('trip.meals', 'Refeições e noites em hotel'))}
     <div class="steppers"><span data-meals style="display:contents">${step('breakfast', 'Cafés', c.breakfast.on)}${step('lunch', 'Almoços', c.lunch.on)}${step('dinner', 'Jantas', c.dinner.on)}</span>${step('hotel', 'Noites em hotel', c.hotel.on)}</div>
     <p class="muted" id="mealsAuto" style="margin:-6px 0 0;font-size:12.5px" hidden>Refeições contadas por dia trabalhado (Ajustes › Custos de vida).</p>
-    <details class="more" id="detOcc" ${editing && (t.status !== 'Excelente' || E.n(t.fines) || E.n(t.damage) || E.n(t.fuel) || E.n(t.tolls)) ? 'open' : ''}>
+    <details class="more" id="detOcc" ${(editing || prefill) && (t.status !== 'Excelente' || E.n(t.fines) || E.n(t.damage) || E.n(t.fuel) || E.n(t.tolls)) ? 'open' : ''}>
       <summary>Entrega, ocorrências e despesas</summary>
       <div class="grid">
         <div class="field">${(L => L.row + L.box)(labRow('trip.status', 'Status da entrega', 't_status'))}<select id="t_status" data-k="status">${E.STATUSES.map(x => `<option ${x === t.status ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
@@ -98,7 +100,7 @@ function openTrip(id) {
         <p class="full muted" id="paidByCo" style="margin:0;font-size:12.5px" hidden></p>
       </div>
     </details>
-    <details class="more" data-truck-only ${t.type === 'borrowed' ? 'hidden' : ''} id="detHos" ${editing && (E.n(t.drive) || E.n(t.hours) || E.n(t.layover) || E.n(t.breakdown) || E.n(t.detention) || E.n(t.stops) || t.tarp || t.away) ? 'open' : ''}>
+    <details class="more" data-truck-only ${t.type === 'borrowed' ? 'hidden' : ''} id="detHos" ${(editing || prefill) && (E.n(t.drive) || E.n(t.hours) || E.n(t.layover) || E.n(t.breakdown) || E.n(t.detention) || E.n(t.stops) || t.tarp || t.away) ? 'open' : ''}>
       <summary>Jornada e pagamentos extras</summary>
       <div class="grid">
         ${num('hours', 'Horas de serviço (on-duty)', false)}
@@ -206,6 +208,7 @@ function openTrip(id) {
           [clean.origin, clean.dest].forEach(cn => { if (cn && !st.settings.cities.some(x => x.toLowerCase() === cn.toLowerCase())) st.settings.cities.push(cn); });
         });
         closeModal(); toast(editing ? 'Viagem atualizada' : 'Viagem lançada');
+        if (onSaved) onSaved(clean);
       }
       if (el.hasAttribute('data-del')) {
         commit(st => { st.week.trips = st.week.trips.filter(x => x.id !== t.id); });

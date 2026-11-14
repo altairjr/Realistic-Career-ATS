@@ -163,3 +163,56 @@ test('mensagens de erro: senha errada, e-mail a confirmar, servidor sem tabelas,
   assert.equal(D.js('cloudCfg().url'), 'https://x.supabase.co');
   await D.js('cloudStart()'); assert.equal(D.status(), 'out');
 });
+
+test('rascunhos do jogo: aparecem, são lançados ou descartados, e a decisão vale também offline', () => withServer(async (m, url) => {
+  const A = device(url); newCareer(A, 'Altair', 3000);
+  await A.js(`cloudSignUp('a@teste.com', 'senha-forte-1')`);
+  const d1 = m.addDraft('a@teste.com', { origin: 'Reno', dest: 'Elko', miles: 290, freight: 3100, tolls: 12 });
+  const d2 = m.addDraft('a@teste.com', { origin: 'Elko', dest: 'Wells', miles: 50, freight: 600, vehicle: 'car' });
+  m.addDraft('a@teste.com', { origin: 'X', dest: 'Y', miles: 1, freight: 1 }, { status: 'discarded' });
+  await A.js('cloudPoll()');
+  assert.deepEqual(A.js('cloud.drafts.map(d => d.data.dest)'), ['Elko', 'Wells'], 'só os novos, na ordem de chegada');
+  // lança o primeiro: a viagem guarda o id do rascunho e o servidor marca como lançado
+  await A.js(`(async () => { commit(st => st.week.trips.push(Object.assign({ id: 't1', day: 1, type: 'company', origin: 'Reno', dest: 'Elko', miles: 290, freight: 3100 }, { draftId: '${d1.id}' }))); await flush(); await resolveDraft('${d1.id}', 'accepted', '${d1.id}'); })()`);
+  assert.equal(m.db.drafts.get(d1.id).status, 'accepted');
+  // descarta o segundo sem internet: some da lista na hora e o servidor só fica sabendo depois
+  m.flags.offline = true;
+  await A.js(`resolveDraft('${d2.id}', 'discarded')`);
+  assert.deepEqual(A.js('cloud.drafts.length'), 0);
+  assert.equal(m.db.drafts.get(d2.id).status, 'new');
+  m.flags.offline = false;
+  await A.js('cloudPoll()');
+  assert.equal(m.db.drafts.get(d2.id).status, 'discarded');
+  assert.equal(A.js('localStorage.getItem("carreira-ats-draftq")'), null, 'fila vazia depois de enviar');
+  A.js('cloudStop()');
+}));
+
+test('rascunho lançado em um aparelho some do outro, mesmo antes do servidor saber', () => withServer(async (m, url) => {
+  const A = device(url); newCareer(A, 'Altair', 3000); await A.js(`cloudSignUp('a@teste.com', 'senha-forte-1')`);
+  const d = m.addDraft('a@teste.com', { origin: 'Reno', dest: 'Elko', miles: 290, freight: 3100 });
+  const B = device(url); await B.js(`cloudSignIn('a@teste.com', 'senha-forte-1')`);
+  assert.equal(B.js('cloud.drafts.length'), 1);
+  await tick(); await edit(A, `st.week.trips.push({ id: 't1', day: 1, type: 'company', origin: 'Reno', dest: 'Elko', miles: 290, freight: 3100, draftId: '${d.id}' });`);
+  await B.js('cloudPoll()');
+  assert.equal(B.js('cloud.drafts.length'), 0, 'a viagem sincronizada carrega o id do rascunho');
+  A.js('cloudStop()'); B.js('cloudStop()');
+}));
+
+test('servidor sem a tabela de rascunhos: sincronização segue normal e o recurso fica desligado', () => withServer(async (m, url) => {
+  m.flags.noDrafts = true;
+  const A = device(url); newCareer(A, 'Altair', 3000); await A.js(`cloudSignUp('a@teste.com', 'senha-forte-1')`);
+  assert.equal(A.status(), 'on');
+  assert.equal(A.js('cloud.draftsOff'), true);
+  await tick(); await edit(A, 'st.gameDay = 4;'); await A.js('cloudPoll()');
+  assert.equal(A.status(), 'on'); assert.equal([...m.db.careers.values()][0].state.gameDay, 4);
+  A.js('cloudStop()');
+}));
+
+test('cada conta só vê os próprios rascunhos', () => withServer(async (m, url) => {
+  const A = device(url); newCareer(A, 'A', 1); await A.js(`cloudSignUp('a@teste.com', 'senha-forte-1')`);
+  const B = device(url); newCareer(B, 'B', 1); await B.js(`cloudSignUp('b@teste.com', 'senha-forte-2')`);
+  m.addDraft('b@teste.com', { origin: 'Reno', dest: 'Elko', miles: 1, freight: 1 });
+  await A.js('cloudPoll()'); await B.js('cloudPoll()');
+  assert.equal(A.js('cloud.drafts.length'), 0); assert.equal(B.js('cloud.drafts.length'), 1);
+  A.js('cloudStop()'); B.js('cloudStop()');
+}));

@@ -28,6 +28,7 @@ src/
     52-settings.js     Aba Ajustes
     54-career.js       Aba Carreira
     56-account.js      Conta, servidor e instalação do app
+    58-drafts.js       Viagens do jogo: caixa de entrada dos rascunhos
     60-xlsx.js         Leitura e escrita de .xlsx sem bibliotecas
     61-sheet-model.js  Modelo da planilha embutido, sem dados (gerado por tools/make-sheet-model.mjs)
     62-sheet-io.js     Importação e exportação no modelo da planilha
@@ -35,7 +36,7 @@ src/
     90-main.js         Eventos e inicialização
 public/              Manifesto, ícones e service worker do app instalável
 supabase/schema.sql  Tabelas e regras de acesso do servidor de sincronização
-tools/               Gerador do modelo da planilha embutido no app
+tools/               Gerador do modelo da planilha e envio de viagem de teste (enviar-rascunho.mjs)
 build.mjs            Junta tudo em dist/ (index.html único + arquivos de public/)
 dist/                App pronto para abrir ou publicar
 tests/               Testes do motor, do estado e da sincronização (com servidor de teste)
@@ -45,7 +46,9 @@ docs/                Regras de cálculo, esquema de dados, sincronização, road
 ## Desenvolvimento
 Requer Node.js 18 ou mais novo. Não há dependências externas.
 ```bash
-npm test        # roda os 33 testes (motor, estado e sincronização)
+npm test            # 37 testes do motor, do estado e da sincronização
+npm run e2e:instalar  # uma vez: baixa o Playwright e o Chromium para os testes no navegador
+npm run test:e2e    # 5 testes no navegador: telas, planilha, dois aparelhos, offline, atualização, viagens do jogo
 npm run build   # gera dist/ a partir de src/ e public/
 ```
 Edite os arquivos em `src/` e rode o build. Não edite `dist/index.html` direto.
@@ -57,7 +60,7 @@ Os módulos são scripts simples que compartilham o escopo global. Para criar um
 2. Envie para a branch `main`. O workflow `pages.yml` testa, gera `dist/` e publica.
 3. Abra o endereço no celular e instale o app.
 
-Detalhes e a configuração da sincronização em `docs/sincronizacao.md`. O que pode e o que não pode ficar público está em `docs/seguranca.md`.
+Detalhes e a configuração da sincronização em `docs/sincronizacao.md`. O que pode e o que não pode ficar público está em `docs/seguranca.md`. O formato das viagens vindas do jogo está em `docs/telemetria.md`.
 
 ## Fontes das regras
 Faixas de salário (otrucking 2026), custos operacionais (ATRI 2025), per diem (IRS Notice 2026-60), imposto federal 2026 (Tax Foundation), jornada e isenção de curta distância (FMCSA) e CDL não-domiciliada (FMCSA, 2026). Detalhes em `docs/`.
