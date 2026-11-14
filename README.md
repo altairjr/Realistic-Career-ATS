@@ -57,7 +57,7 @@ Os módulos são scripts simples que compartilham o escopo global. Para criar um
 2. Envie para a branch `main`. O workflow `pages.yml` testa, gera `dist/` e publica.
 3. Abra o endereço no celular e instale o app.
 
-Detalhes e a configuração da sincronização em `docs/sincronizacao.md`.
+Detalhes e a configuração da sincronização em `docs/sincronizacao.md`. O que pode e o que não pode ficar público está em `docs/seguranca.md`.
 
 ## Fontes das regras
 Faixas de salário (otrucking 2026), custos operacionais (ATRI 2025), per diem (IRS Notice 2026-60), imposto federal 2026 (Tax Foundation), jornada e isenção de curta distância (FMCSA) e CDL não-domiciliada (FMCSA, 2026). Detalhes em `docs/`.
