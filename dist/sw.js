@@ -3,7 +3,7 @@
    - Ícones e manifesto: cópia guardada primeiro.
    - Fontes do Google: cópia guardada, atualizada em segundo plano.
    - Chamadas ao servidor de sincronização nunca passam por aqui.
-   0.15.0-7291ed5f é trocado pelo build a cada versão, o que renova o cache. */
+   0.16.0-907db9c1 é trocado pelo build a cada versão, o que renova o cache. */
 const CACHE = 'carreira-ats-__BUILD__';
 const FONTS = 'carreira-ats-fontes';
 const SHELL = ['./', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];

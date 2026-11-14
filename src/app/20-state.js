@@ -97,6 +97,7 @@ function normalize(st) {
   // Viagens da semana em aberto sem regras gravadas recebem as regras atuais
   const eff = effSettings(st);
   for (const t of st.week.trips) {
+    if (E.STATUS_OLD[t.status]) t.status = E.STATUS_OLD[t.status];
     if (t.type === 'borrowed') { if (!(t.car && t.car.mode)) t.car = E.carSnapshot(eff, 'borrowed'); continue; }
     if (!t.contract) Object.assign(t, E.snapshotFor('company', eff));
     if (!t.rules) t.rules = E.rulesSnapshot(eff);

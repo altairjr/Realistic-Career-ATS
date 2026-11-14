@@ -1,4 +1,4 @@
-# Regras de cálculo (v0.14)
+# Regras de cálculo (v0.16)
 
 O app usa regras do mercado de transporte dos EUA (2026). Cada regra pode ser ligada, desligada ou ajustada.
 
@@ -86,9 +86,18 @@ Frete do jogo × 0,10, ou milhas × $/mi.
 - As regras federais de 2026 continuam as mesmas; os programas-piloto de flexibilização só começam em 2027 e valem para poucos motoristas inscritos.
 
 ## Planilha (.xlsx)
-- Formato próprio com as abas Leia-me, Motorista, Empresa e Viagens ("Baixar modelo" em Ajustes).
+- O app lê e escreve o modelo da planilha Carreira Realista ATS, com as 9 abas originais, as mesmas colunas, listas, cores e fórmulas.
+- **Importar** lê:
+  - *Motorista & Carreira*: motorista, saldo, empréstimo, classificação, forma de pagamento, operação, horas, valor, comissão, empresa, renome, caminhão e trailer.
+  - *Config*: refeições, hotel, moradia e percentual do carro emprestado. *Parametros*: cidades.
+  - *Diário de bordo*, *Historico de fretes* e *Diário de bordo carro*: as viagens. Linhas "Final de semana" e linhas vazias são ignoradas.
+  - *Histórioco holerite*: quais semanas já foram pagas.
+- O dia atual do jogo passa a ser o dia da última viagem (a planilha não guarda esse dado).
 - Qualquer erro de conversão mostra a lista com aba, linha e coluna, e nada é alterado.
-- A importação recalcula tudo com as regras do app e mantém o saldo informado.
+- A importação recalcula salário, impostos e despesas com as regras do app e mantém o saldo informado.
+- **Exportar** preenche o modelo: semana em aberto no Diário de bordo, semanas fechadas no Historico de fretes (com "Final de semana" entre elas), viagens de carro, holerites e pay lag. As abas Dashboard continuam com as fórmulas da planilha.
+- Limites da exportação: multas e danos saem somados numa coluna; horas de direção e de serviço não têm coluna no modelo; classificações e formas de pagamento que não existem nas listas da planilha (Lease, Frota, Percentual) saem com o nome do app.
+- Avaliações de entrega: as mesmas 8 do jogo e da planilha (Excelente, Bom trabalho, Satisfatório, Razoável, Tolerável, Danificado, Imprudente, Atrasado).
 
 ## Dados
 Formato e limites em `esquema-de-dados.md`.

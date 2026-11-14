@@ -1,5 +1,6 @@
 /* ---------- Planilha (.xlsx) sem bibliotecas externas ----------
-   Leitura: zip (DecompressionStream) + XML. Escrita: zip sem compressão. */
+   Leitura: zip (DecompressionStream) + XML. Escrita: zip sem compressão.
+   A exportação parte do modelo embutido (61-sheet-model.js) e troca só as células de dados (sheetEdit). */
 const XL = (() => {
   const td = new TextDecoder(), te = new TextEncoder();
   async function unzip(buf) {
@@ -87,23 +88,67 @@ const XL = (() => {
     return out;
   }
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const unesc = s => String(s).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
   const colName = i => { let s = ''; i++; while (i) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; };
-  // sheets: [{ name, rows: [[...]], widths?: [n...], header?: true }]
-  function write(sheets) {
-    const sheetXml = sh => `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${sh.widths ? `<cols>${sh.widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols>` : ''}<sheetData>${sh.rows.map((r, ri) => `<row r="${ri + 1}">${r.map((v, ci) => {
-      const ref = colName(ci) + (ri + 1), st = sh.header && ri === 0 ? ' s="1"' : '';
-      if (v === '' || v == null) return '';
-      return typeof v === 'number' ? `<c r="${ref}"${st}><v>${v}</v></c>` : `<c r="${ref}" t="inlineStr"${st}><is><t xml:space="preserve">${esc(v)}</t></is></c>`;
-    }).join('')}</row>`).join('')}</sheetData></worksheet>`;
-    const entries = [
-      ['[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((s, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`],
-      ['_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
-      ['xl/workbook.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheets.map((s, i) => `<sheet name="${esc(s.name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets></workbook>`],
-      ['xl/_rels/workbook.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((s, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`],
-      ['xl/styles.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`],
-      ...sheets.map((s, i) => [`xl/worksheets/sheet${i + 1}.xml`, sheetXml(s)])
-    ];
-    return zip(entries);
+  const b64 = str => { const bin = atob(str), out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out.buffer; };
+  // Abre um .xlsx e devolve { files: Map(caminho → texto), sheets: { nomeDaAba: caminho } }
+  async function open(buf) {
+    const z = await unzip(buf), files = new Map();
+    for (const name of Object.keys(z.files)) files.set(name, await z.read(name));
+    const rels = {};
+    for (const m of (files.get('xl/_rels/workbook.xml.rels') || '').matchAll(/<Relationship\b[^>]*>/g)) rels[m[0].match(/\bId="([^"]+)"/)[1]] = 'xl/' + m[0].match(/\bTarget="([^"]+)"/)[1].replace(/^\/?(xl\/)?/, '');
+    const sheets = {};
+    for (const m of (files.get('xl/workbook.xml') || '').matchAll(/<sheet\b[^>]*>/g)) sheets[unesc(m[0].match(/\bname="([^"]+)"/)[1])] = rels[m[0].match(/\br:id="([^"]+)"/)[1]];
+    return { files, sheets };
   }
-  return { read, write };
+  const save = files => zip([...files]);
+  /* Editor de uma aba: troca valores mantendo o estilo de cada célula.
+     Valores: número, texto, { f: 'fórmula' } ou null (célula vazia com estilo). */
+  function sheetEdit(xmlText) {
+    const m = xmlText.match(/<sheetData>([\s\S]*?)<\/sheetData>|<sheetData\/>/);
+    const head = xmlText.slice(0, m.index); let tail = xmlText.slice(m.index + m[0].length);
+    const rows = new Map();
+    for (const r of (m[1] || '').matchAll(/<row\b([^>]*?)(?:\/>|>([\s\S]*?)<\/row>)/g)) {
+      const n = +r[1].match(/\br="(\d+)"/)[1], cells = new Map();
+      for (const c of (r[2] || '').matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
+        const ref = c[1].match(/\br="([A-Z]+)\d+"/)[1], s = c[1].match(/\bs="(\d+)"/), t = c[1].match(/\bt="([^"]+)"/);
+        cells.set(colIdx(ref), { s: s ? s[1] : null, t: t ? t[1] : null, body: c[2] || '' });
+      }
+      rows.set(n, { attrs: r[1].replace(/\s*\br="\d+"/, '').replace(/\s*\bspans="[^"]*"/, '').trim(), cells });
+    }
+    const split = ref => { const x = ref.match(/^([A-Z]+)(\d+)$/); return [colIdx(x[1]), +x[2]]; };
+    const row = n => { if (!rows.has(n)) rows.set(n, { attrs: '', cells: new Map() }); return rows.get(n); };
+    const api = {
+      style(ref) { const [c, r] = split(ref), cell = rows.get(r) && rows.get(r).cells.get(c); return cell ? cell.s : null; },
+      set(ref, v, s) {
+        const [c, r] = split(ref), R = row(r), old = R.cells.get(c), st = s !== undefined ? s : old ? old.s : null;
+        if (v === null || v === undefined || v === '') R.cells.set(c, { s: st, t: null, body: '' });
+        else if (typeof v === 'number') R.cells.set(c, { s: st, t: null, body: `<v>${v}</v>` });
+        else if (typeof v === 'object') R.cells.set(c, { s: st, t: null, body: `<f>${esc(v.f)}</f>` });
+        else R.cells.set(c, { s: st, t: 'inlineStr', body: `<is><t xml:space="preserve">${esc(v)}</t></is>` });
+        return api;
+      },
+      // copia altura e estilos de uma linha para outra, sem os valores
+      cloneRow(from, to) { const F = rows.get(from); if (!F) return api; rows.set(to, { attrs: F.attrs, cells: new Map([...F.cells].map(([c, x]) => [c, { s: x.s, t: null, body: '' }])) }); return api; },
+      dropFrom(n, to = Infinity) { for (const k of [...rows.keys()]) if (k >= n && k <= to) rows.delete(k); return api; },
+      tail(fn) { tail = fn(tail); return api; },
+      // validações de lista que começam na linha `first` passam a cobrir até a linha `last`
+      extendValidations(first, last) {
+        tail = tail.replace(/(<dataValidation\b[^>]*\bsqref=")([^"]+)(")/g, (all, a, sq, z) => {
+          const t = sq.split(' ')[0].match(/^([A-Z]+)(\d+)(?::([A-Z]+)\d+)?$/); if (!t || +t[2] !== first) return all;
+          return `${a}${t[1]}${first}:${t[3] || t[1]}${last}${z}`;
+        });
+        return api;
+      },
+      xml() {
+        const body = [...rows.keys()].sort((a, b) => a - b).map(n => {
+          const R = rows.get(n), cs = [...R.cells.keys()].sort((a, b) => a - b).map(c => { const x = R.cells.get(c), at = `r="${colName(c)}${n}"${x.s !== null ? ` s="${x.s}"` : ''}${x.t ? ` t="${x.t}"` : ''}`; return x.body ? `<c ${at}>${x.body}</c>` : `<c ${at}/>`; }).join('');
+          return `<row r="${n}"${R.attrs ? ' ' + R.attrs : ''}>${cs}</row>`;
+        }).join('');
+        return `${head}<sheetData>${body}</sheetData>${tail}`;
+      }
+    };
+    return api;
+  }
+  return { read, open, save, sheetEdit, b64, colName };
 })();

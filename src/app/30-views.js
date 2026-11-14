@@ -149,7 +149,7 @@ function dreTable(d, s) {
   return h + '</tbody></table>';
 }
 
-const statusChip = st => `<span class="chip ${({ Excelente: 'ok', Bom: 'ok', Regular: 'warn', Ruim: 'bad', Atrasada: 'bad' })[st] || ''}">${esc(st || '—')}</span>`;
+const statusChip = st => `<span class="chip ${({ Excelente: 'ok', 'Bom trabalho': 'ok', Bom: 'ok', 'Satisfatório': 'ok', 'Razoável': 'warn', Regular: 'warn', 'Tolerável': 'warn', Danificado: 'bad', Imprudente: 'bad', Ruim: 'bad', Atrasado: 'bad', Atrasada: 'bad' })[st] || ''}">${esc(st || '—')}</span>`;
 function mealsText(t) {
   const parts = [];
   const add = (n, a, b) => { n = E.n(n); if (n) parts.push(`${n} ${n === 1 ? a : b}`); };

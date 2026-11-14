@@ -5,7 +5,9 @@
 const Engine = (() => {
   const WEEKDAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
   const WEEKDAYS_FULL = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
-  const STATUSES = ['Excelente', 'Bom', 'Regular', 'Ruim', 'Atrasada'];
+  // Avaliações de entrega do jogo (as mesmas da planilha). STATUS_OLD converte os nomes usados até a v0.15.
+  const STATUSES = ['Excelente', 'Bom trabalho', 'Satisfatório', 'Razoável', 'Tolerável', 'Danificado', 'Imprudente', 'Atrasado'];
+  const STATUS_OLD = { Bom: 'Bom trabalho', Regular: 'Satisfatório', Ruim: 'Tolerável', Atrasada: 'Atrasado' };
   const n = v => { const x = parseFloat(v); return isFinite(x) ? x : 0; };
   const r2 = v => Math.round((n(v) + Number.EPSILON) * 100) / 100;
   const sum = (arr, f) => arr.reduce((a, t) => a + (typeof f === 'function' ? f(t) : n(t[f])), 0);
@@ -381,7 +383,7 @@ const Engine = (() => {
     return { rows, limit, window, cycleUsed, cycleLeft: r2(Math.max(0, limit - cycleUsed)), over: cycleUsed > limit, restartDay };
   }
 
-  return { WEEKDAYS, WEEKDAYS_FULL, STATUSES, CLASSIFICATIONS, OPERATIONS, PRESETS, TAX2026, n, r2, defaults, mergeDefaults,
+  return { WEEKDAYS, WEEKDAYS_FULL, STATUSES, STATUS_OLD, CLASSIFICATIONS, OPERATIONS, PRESETS, TAX2026, n, r2, defaults, mergeDefaults,
     presetKeyFor, taxTypeFor, applyPreset, weekdayIdx, weekStartOf, dayLabel, paydayFor,
     contractOf, carRuleOf, carSnapshot, carBreakdown, snapshotFor, rulesSnapshot, marketFreight, tripCosts, borrowedValue,
     commissionRule, tripPay, annualTax, dre, hos };

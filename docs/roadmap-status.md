@@ -1,11 +1,11 @@
-# Roadmap — onde estamos (v0.15, nov/2026)
+# Roadmap — onde estamos (v0.16, nov/2026)
 
 | Fase | Objetivo | Status |
 |---|---|---|
 | 0 | Motor de regras separado da interface | ✅ Concluída |
 | 1 | App em HTML | ✅ Concluída |
 | 1b | Revisão para escalar (código, dados, regras dos EUA) | ✅ Concluída |
-| 2 | Celular + sincronização | 🟡 Código pronto; falta ligar ao servidor real |
+| 2 | Celular + sincronização | ✅ Concluída (publicado e ligado ao Supabase) |
 | 3 | Integração com o jogo (telemetria) | ⬜ Não iniciada |
 | 4 | Overlay sobre o jogo | ⬜ Não iniciada |
 | 5 | Carreira avançada | 🟡 Boa parte entregue |
@@ -44,7 +44,7 @@
 - Interface para celular e PC.
 - Sincronização pela conta claude.ai quando aberto como artifact; cópia local; backup em JSON.
 
-### Fase 2b — App instalável e sincronização própria (esta versão)
+### Fase 2b — App instalável e sincronização própria (v0.15)
 - **App instalável (PWA)**: manifesto, ícones e service worker. Abre sem internet e se atualiza sozinho.
 - **Publicação**: workflow do GitHub Pages que testa, gera e publica a cada envio para a `main`.
 - **Sincronização própria com login**:
@@ -56,14 +56,19 @@
 - **Testes**: 31 automáticos (8 novos de sincronização, com servidor de teste) e teste de dois aparelhos no navegador.
 - **Documentação**: `sincronizacao.md` com o passo a passo.
 
+### Planilha no modelo original (v0.16, esta versão)
+- Importar e exportar no modelo da planilha Carreira Realista ATS (9 abas), com as mesmas colunas, listas, cores e fórmulas.
+- O modelo fica embutido no app sem nenhum dado (`61-sheet-model.js`, gerado por `tools/make-sheet-model.mjs`).
+- Avaliações de entrega iguais às do jogo e da planilha (8 opções).
+- Publicação no GitHub Pages e primeiro login no Supabase real confirmados.
+
 ### Fase 5 — parte já feita
 - 5 classificações com predefinições; fixo, hora, CPM e percentual; jornada FMCSA; empréstimo; renome; bônus de segurança; experiência e CPM sugerido; status migratório; custos de owner-operator.
 
 ## Etapas que faltam
-### Fase 2b — o que depende de você
-- Ativar o GitHub Pages (origem "GitHub Actions") e enviar para a `main`.
-- Criar o projeto no Supabase, rodar `supabase/schema.sql` e preencher `src/config.js`.
-- Primeiro teste com o servidor real: criar conta, entrar no segundo aparelho, importar o JSON do artifact.
+### Fase 2b — o que falta conferir
+- Segundo aparelho (celular) entrando na mesma conta e recebendo a carreira.
+- Gravar endereço e chave em `src/config.js` para os aparelhos novos não precisarem digitar.
 
 ### Fase 3 — Telemetria do ATS
 - Plugin do SDK de telemetria da SCS e app companheiro no PC (Tauri ou Electron).
@@ -81,9 +86,7 @@
 - Eventos aleatórios (inspeção, quebra) e gráficos de evolução.
 
 ## Próxima etapa de implementação
-**Fechar a fase 2b no servidor real** (itens acima) e corrigir o que o primeiro uso mostrar.
-
-Depois, **Fase 3: telemetria do ATS.**
+**Fase 3: telemetria do ATS.**
 1. Protótipo do leitor: plugin do SDK de telemetria da SCS gravando os dados da entrega.
 2. App companheiro no PC que lê esses dados, entra na mesma conta e grava rascunhos de viagem no servidor.
 3. No app, tela de rascunhos: confirmar, corrigir ou descartar cada entrega.

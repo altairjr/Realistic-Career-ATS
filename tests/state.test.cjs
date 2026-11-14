@@ -74,25 +74,86 @@ test('infrações da semana: jornada acima de 14h e pausa exigida fora do raio l
   assert.deepEqual(codes.sort(), ['break30', 'duty14']);
 });
 
-test('planilha: erros apontam aba, linha e coluna e nada é montado', () => {
-  const { js } = load();
-  const r = plain(js(`parseCareerSheet({
-    Motorista: [['Campo', 'Valor'], ['Saldo bancário atual (USD)', '8.239,15'], ['Dia atual do jogo', 17]],
-    Empresa: [['Campo', 'Valor'], ['Nome da empresa', 'ADM'], ['Classificação', 'Motorista legal']],
-    Viagens: [['Dia', 'Veículo', 'Destino', 'Distância (mi)', 'Frete (USD)'], [20, 'Moto', '', 10, 'abc']] })`));
-  assert.equal(r.ok, false);
-  assert.ok(r.errors.some(e => e.includes('Classificação')));
-  assert.ok(r.errors.some(e => e.includes('linha 2') && e.includes('Veículo')));
-  assert.ok(r.errors.some(e => e.includes('não é um número')));
+// Planilha no modelo "Carreira Realista ATS": cada aba é uma lista de linhas, como o leitor de .xlsx devolve
+const sheetBook = (over = {}) => Object.assign({
+  Config: [['Configurações'], [], [], [], [], ['Parâmetro', 'Valor Base (USD)'], ['Alimentação - Café da Manhã', 15], ['Alimentação - Almoço', 35], ['Alimentação - Jantar', 30], ['Diária de Pernoite / Hotel', 80], ['Moradia / Custo de Vida Fixo', 450], ['Porcentagem comissão frete carro emprestado', 0.3]],
+  Parametros: [['Cidades ', 'Reno'], ['Reno'], ['Carson City'], ['Elko']],
+  'Motorista & Carreira': [['Ficha'], [], [],
+    ['Nome Do Motorista', 'Nacionalidade', 'Capacitação (Nivel do Motorista no Jogo)', 'Saldo Bancario (USD)', 'Emprestimo Total / Parcelas (USD)', 'Emprestimo Parcelas (USD)'],
+    ['Altair Junior', 'Brasileiro', 1, 8239.15, 2000, 100],
+    ['Classificação do Vínculo', 'Forma de Pagamento', 'Especificações da Operação', 'Horas de Trabalho Contratual (Horas por Semanal)', 'Valor (USD)', 'Comissão'],
+    ['Nivel 1: Company Driver (Empregado W-2)', 'Pagamento fixo semanal', 'Local/Dedicated', 50, 1300, 0.05],
+    ['Nome da Empresa', 'Garagem Sede / Estado / País', 'Renome na Empresa', 'Bonus Por Renome', 'Caminhão Fixo (Emprestado)', 'Trailer Fixo (Emprestado)'],
+    ['ADM', 'Carson City / Nevada / EUA', 2, 0.02, 'Modelo do caminhão', 'Kenworth T680']],
+  'Diário de bordo': [['Diário'], [], [], ['Dia do jogo', 'Origem', 'Destino', 'Status da Entrega', 'Distância (mi)', 'Frete Bruto (USD)', 'Combustível (USD)', 'Pedágios (USD)', 'Cafés Da Manhã', 'Almoços', 'Janta', 'Diárias', 'Multas / Danos (USD)', 'Status Pagamento'],
+    [16, 'Carson City', 'Truckee', 'Razoável ', 184, 4543, 0, 0, 0, 1, 0, 0, 0, 'Aberto'], ['', '', '', '', '', '', '', '', '', '', '', '', '', '']],
+  'Histórioco holerite': [['Painel'], [], [], ['Previsão do pagamento  (Dia do jogo)', 'Dia do pagamento (Dia do jogo)', 'Semana trabalhada (Referência)', 'Valor Consolidado (USD)', 'Status Pagamento'], [19, '', '8 - 12', 1400, 'A pagar']],
+  'Historico de fretes': [['Histórico'], [], [], ['Dia do jogo', 'Origem', 'Destino', 'Status da Entrega', 'Distância (mi)', 'Frete Bruto (USD)', 'Combustível (USD)', 'Pedágios (USD)', 'Cafés Da Manhã', 'Almoços', 'Janta', 'Diárias', 'Multas / Danos (USD)'],
+    [2, 'Carson City', 'Reno', 'Excelente', 72, 2125, 0, 0, 0, 1, 0, 0, 0], ['Final de semana'], [], [9, 'Carson City', 'Reno', 'Bom trabalho', 68, 2804, 0, 0, 1, 1, 0, 0, 50], ['Final de semana']],
+  'Diário de bordo carro': [['Carro'], [], [], ['ID Viagem', 'Dia do jogo', 'Origem', 'Destino', 'Tipo do trabalho', 'Status da Entrega', 'Distância (mi)', 'Frete Bruto (USD)', 'Bonus (USD)', 'Combustível (USD)', 'Pedágios (USD)', 'Cafés Da Manhã', 'Almoços', 'Janta', 'Diárias', 'Multas / Danos (USD)'],
+    [1, 10, 'Reno', 'Tonopah', 'Carro Emprestado', 'Excelente', 275, 1026, 353, 0, 0, 0, 1, 0, 0, 0], [2, 17, 'Reno', 'Elko', 'Carro próprio', 'Excelente', 100, 500, -1, 20, 0, 0, 0, 0, 0, 0]]
+}, over);
+
+test('planilha no modelo: lê motorista, contrato, custos, cidades e as três tabelas de viagens', () => {
+  const { js, ctx } = load(); ctx.book = sheetBook();
+  const r = plain(js(`parseCareerSheet(book)`));
+  assert.deepEqual(r.errors, []);
+  const D = r.data;
+  assert.equal(D.profile.name, 'Altair Junior'); assert.equal(D.balance, 8239.15); assert.equal(D.gameDay, 17, 'dia atual = dia da última viagem');
+  assert.equal(D.clsKey, 'w2'); assert.equal(D.payMode, 'weekly'); assert.equal(D.baseV, 1300); assert.equal(D.commV, 5, 'comissão em fração vira pontos percentuais');
+  assert.equal(D.operation, 'Local (Day Cab)');
+  assert.deepEqual(D.extras.costs, { breakfast: 15, lunch: 35, dinner: 30, hotel: 80, housing: 450 });
+  assert.equal(D.extras.borrowedPct, 30); assert.deepEqual(D.extras.cities, ['Reno', 'Carson City', 'Elko']);
+  assert.equal(D.extras.truck, '', 'o texto de exemplo do modelo não vira nome de caminhão'); assert.equal(D.extras.trailer, 'Kenworth T680');
+  assert.equal(D.trips.length, 5, '"Final de semana" e linhas vazias não viram viagens');
+  assert.equal(D.trips.find(t => t.day === 16).status, 'Razoável');
+  assert.deepEqual(D.trips.filter(t => t.type === 'borrowed').map(t => [t.carMode, t.bonus]), [['borrowed', 353], ['owned', -1]]);
 });
 
-test('planilha válida: saldo final igual ao informado e semanas antigas no histórico', () => {
-  const { js } = load();
-  const r = plain(js(`(() => { const p = parseCareerSheet({
-    Motorista: [['Campo', 'Valor'], ['Nome do motorista', 'Altair'], ['Saldo bancário atual (USD)', 8239.15], ['Dia atual do jogo', 17]],
-    Empresa: [['Campo', 'Valor'], ['Nome da empresa', 'ADM'], ['Classificação', 'W-2'], ['Operação', 'Local']],
-    Viagens: [['Dia', 'Veículo', 'Origem', 'Destino', 'Distância (mi)', 'Frete (USD)'], [2, 'Caminhão', 'Carson City', 'Reno', 72, 2125], [9, 'Carro emprestado', 'Reno', 'Tonopah', 275, 1026], [16, 'Caminhão', 'Carson City', 'Truckee', 184, 4543]] });
-    const b = buildFromSheet(p.data);
-    return { ok: p.ok, bal: balance(b.state), hist: b.history.length, open: b.state.week.trips.length, op: b.state.contracts[0].operation }; })()`));
-  assert.deepEqual(r, { ok: true, bal: 8239.15, hist: 2, open: 1, op: 'Local (Day Cab)' });
+test('planilha no modelo: erros apontam aba, linha e coluna e nada é montado', () => {
+  const { js, ctx } = load();
+  const b = sheetBook(); b['Motorista & Carreira'][6][0] = 'Motorista legal'; b['Motorista & Carreira'][4][3] = '';
+  b['Diário de bordo'][4] = [16, 'Carson City', '', 'Ótimo', 'abc', 4543];
+  ctx.book = b;
+  const r = plain(js(`parseCareerSheet(book)`));
+  assert.equal(r.ok, false);
+  assert.ok(r.errors.some(e => e.includes('Classificação do Vínculo') && e.includes('A7')));
+  assert.ok(r.errors.some(e => e.includes('Saldo Bancario') && e.includes('obrigatório')));
+  assert.ok(r.errors.some(e => e.includes('Diário de bordo › linha 5') && e.includes('não é um número')));
+  assert.ok(r.errors.some(e => e.includes('linha 5') && e.includes('Status da Entrega')));
+  ctx.book = { Planilha1: [] };
+  assert.ok(plain(js(`parseCareerSheet(book)`)).errors[0].includes('Faltam as abas'));
+});
+
+test('planilha no modelo: saldo final igual ao informado, semanas no histórico e holerite conforme a aba', () => {
+  const { js, ctx } = load(); ctx.book = sheetBook();
+  const r = plain(js(`(() => { const p = parseCareerSheet(book); const b = buildFromSheet(p.data); const st = b.state, ct = st.contracts[0];
+    return { bal: balance(st), hist: b.history.map(w => w.start), open: st.week.trips.length, housing: st.settings.costs.housing.val, pct: st.settings.borrowed.pct, loan: [st.bank.loanTotal, st.settings.loan.on, st.settings.loan.installment],
+      renome: [ct.renomeLevel, ct.terms.renome.perLevel], pay: st.payroll.map(x => [x.weekStart, x.status]), cities: st.settings.cities.includes('Elko') }; })()`));
+  assert.deepEqual(r, { bal: 8239.15, hist: [1, 8], open: 2, housing: 450, pct: 30, loan: [2000, true, 100], renome: [2, 1], pay: [[1, 'paid'], [8, 'pending']], cities: true });
+});
+
+test('exportar planilha: mesmo modelo, dados nas mesmas células, e a planilha exportada volta igual', async t => {
+  const { js, ctx } = load();
+  try { new DecompressionStream('deflate-raw'); } catch (e) { return t.skip('este Node não descompacta zip (deflate-raw); use Node 20.12 ou mais novo'); }
+  Object.assign(ctx, { atob, DecompressionStream, Response, Blob, Uint8Array, book: sheetBook() });
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', 'app', '61-sheet-model.js'), 'utf8'), ctx);
+  const out = await js(`(async () => { const b = buildFromSheet(parseCareerSheet(book).data); S = b.state; H = b.history;
+    const bytes = await buildSheetFile(S, H), f = await XL.open(bytes.buffer), x = n => f.files.get(f.sheets[n]);
+    const cell = (n, ref) => { const m = x(n).match(new RegExp('<c r="' + ref + '"[^>]*?(?:/>|>([^]*?)</c>)')); return m ? (m[1] || '').replace(/<[^>]+>/g, '') : undefined; };
+    return { names: Object.keys(f.sheets), name: cell('Motorista & Carreira', 'A5'), bal: cell('Motorista & Carreira', 'D5'), cls: cell('Motorista & Carreira', 'A7'), comm: cell('Motorista & Carreira', 'F7'),
+      housing: cell('Config', 'B11'), b1: cell('Config', 'B1'), city3: cell('Parametros', 'A4'), open: [cell('Diário de bordo', 'A5'), cell('Diário de bordo', 'D5'), cell('Diário de bordo', 'N5')],
+      hist: [cell('Historico de fretes', 'A5'), cell('Historico de fretes', 'A6'), cell('Historico de fretes', 'A8')], merges: (x('Historico de fretes').match(/<mergeCell ref="[^"]+"/g) || []).length,
+      car: [cell('Diário de bordo carro', 'E5'), cell('Diário de bordo carro', 'E6')], carF: cell('Dashboard carro', 'L6'), dv: /sqref="D5:D1003"/.test(x('Diário de bordo')), pay: cell('Histórioco holerite', 'E6'), lag: +cell('Dashboard & DRE', 'B21') > 0,
+      secret: [...f.files.values()].some(v => /Subabase/i.test(v)) }; })()`);
+  const r = plain(out);
+  assert.deepEqual(r.names, ['Config', 'Parametros', 'Motorista & Carreira', 'Diário de bordo', 'Dashboard & DRE', 'Histórioco holerite', 'Historico de fretes', 'Diário de bordo carro', 'Dashboard carro']);
+  assert.equal(r.name, 'Altair Junior'); assert.equal(r.bal, '8239.15'); assert.equal(r.cls, 'Nivel 1: Company Driver (Empregado W-2)');
+  assert.equal(r.comm, '5% + INT((C5 - 1) / 2) * 1%', 'comissão igual à da fórmula do modelo mantém a fórmula');
+  assert.equal(r.housing, '450'); assert.equal(r.b1, ''); assert.equal(r.city3, 'Elko');
+  assert.deepEqual(r.open, ['16', 'Razoável ', 'Aberto']);
+  assert.deepEqual(r.hist, ['2', 'Final de semana', '9']); assert.equal(r.merges, 2);
+  assert.deepEqual(r.car, ['Carro Emprestado', 'Carro próprio']);
+  assert.ok(r.carF.includes('Config!$B$12') && r.carF.includes('K6')); assert.ok(r.dv); assert.equal(r.pay, 'A pagar'); assert.ok(r.lag);
+  assert.equal(r.secret, false);
 });

@@ -7,7 +7,7 @@ Sistema de carreira realista para **American Truck Simulator**. Diário de bordo
 - **Sincronizar celular e PC:** crie um projeto gratuito no Supabase, rode `supabase/schema.sql`, preencha `src/config.js` e crie sua conta no app. Passo a passo em `docs/sincronizacao.md`.
 - **Sem instalar nada:** abra `dist/index.html` no navegador. Os dados ficam naquele navegador; use *Exportar JSON* para backup ou para levar a outro aparelho.
 - **Dentro do Claude:** a versão publicada como artifact salva na conta Claude. Para levar a carreira ao app instalado, exporte o JSON lá e importe aqui.
-- **Trazer dados de uma planilha:** em *Ajustes › Dados e sincronização*, use **Baixar modelo**, preencha as abas Motorista, Empresa e Viagens e use **Importar planilha**. `docs/minha-planilha-carreira-ats.xlsx` é um exemplo preenchido.
+- **Trazer dados de uma planilha:** em *Ajustes › Dados e sincronização*, use **Importar planilha** com a planilha Carreira Realista ATS (o modelo original de 9 abas). **Exportar planilha** devolve os dados no mesmo modelo e **Baixar modelo** gera a planilha vazia, igual a `docs/minha-planilha-carreira-ats.xlsx`.
 
 ## Estrutura
 ```
@@ -29,11 +29,13 @@ src/
     54-career.js       Aba Carreira
     56-account.js      Conta, servidor e instalação do app
     60-xlsx.js         Leitura e escrita de .xlsx sem bibliotecas
-    62-sheet-io.js     Modelo, importação e exportação da planilha
+    61-sheet-model.js  Modelo da planilha embutido, sem dados (gerado por tools/make-sheet-model.mjs)
+    62-sheet-io.js     Importação e exportação no modelo da planilha
     70-dialogs.js      Janelas: nova carreira, viagem, fechamento, backup
     90-main.js         Eventos e inicialização
 public/              Manifesto, ícones e service worker do app instalável
 supabase/schema.sql  Tabelas e regras de acesso do servidor de sincronização
+tools/               Gerador do modelo da planilha embutido no app
 build.mjs            Junta tudo em dist/ (index.html único + arquivos de public/)
 dist/                App pronto para abrir ou publicar
 tests/               Testes do motor, do estado e da sincronização (com servidor de teste)
@@ -43,7 +45,7 @@ docs/                Regras de cálculo, esquema de dados, sincronização, road
 ## Desenvolvimento
 Requer Node.js 18 ou mais novo. Não há dependências externas.
 ```bash
-npm test        # roda os 31 testes (motor, estado e sincronização)
+npm test        # roda os 33 testes (motor, estado e sincronização)
 npm run build   # gera dist/ a partir de src/ e public/
 ```
 Edite os arquivos em `src/` e rode o build. Não edite `dist/index.html` direto.
