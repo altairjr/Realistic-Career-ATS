@@ -98,15 +98,16 @@ function rulesGuide() {
 
 function startModule() {
   const s = S.settings, C = S.career, L = s.loan, wd = E.WEEKDAYS_FULL.map((l, i) => [i, l]), eff = SS();
-  const weekly = (s.costs.housing.on ? E.n(s.costs.housing.val) : 0) + (eff.opCosts.on ? E.n(eff.opCosts.truckWeekly) + E.n(eff.opCosts.otherWeekly) : 0);
+  const weekly = (eff.opCosts.on ? E.n(eff.opCosts.truckWeekly) + E.n(eff.opCosts.otherWeekly) : 0), rentW = s.costs.housing.on ? E.n(s.costs.housing.val) : 0;
   const sum = [`saldo inicial ${fmt(S.bank.opening)}`, s.bills.on ? `contas toda ${E.WEEKDAYS_FULL[s.bills.weekday].toLowerCase()}` : 'contas no fechamento', L.on ? `empréstimo ${fmt(S.bank.loanTotal)}` : 'sem empréstimo'].join(' · ');
   return mod('Início e contas fixas', 'Com quanto o motorista começa, quando as contas vencem e se há empréstimo.', null,
     F.num('bank.opening', 'Saldo inicial', { money: true, hint: `Antes de qualquer lançamento. Saldo atual: ${fmt(balance(S))}.` }) +
     F.num('career.startDay', 'Dia de início da carreira', { step: 1, hint: 'Contas e parcelas contam a partir deste dia.' }) +
     `<div class="field full">${F.chk('settings.bills.on', 'Cobrar as contas fixas toda semana, mesmo sem salário')}</div>` +
     (s.bills.on ? F.sel('settings.bills.weekday', 'Dia da cobrança', wd, { num: true }) : '') +
-    hint(s.bills.on ? `Toda ${E.WEEKDAYS_FULL[s.bills.weekday].toLowerCase()} saem ${fmt(weekly)} do saldo (moradia${eff.opCosts.on ? ', parcela do caminhão e licenças' : ''}). Com o pay lag, o primeiro holerite só chega ${s.payroll.lagOn ? `na ${E.WEEKDAYS_FULL[s.payroll.paydayWeekday].toLowerCase()} da semana seguinte` : 'no fechamento'}; um saldo inicial de pelo menos ${fmt(weekly * 2)} cobre esse intervalo.` : 'Desligado: as contas fixas saem do saldo só quando a semana é fechada.') +
-    `<div class="field full">${F.chk('settings.loan.on', 'Empréstimo ativo')}</div>` +
+    hint(s.bills.on ? `Toda ${E.WEEKDAYS_FULL[s.bills.weekday].toLowerCase()} ${eff.opCosts.on ? `saem ${fmt(weekly)} do saldo (parcela do caminhão e licenças) e ` : ''}vence o aluguel, que você paga na aba Vida. Com o pay lag, o primeiro holerite só chega ${s.payroll.lagOn ? `na ${E.WEEKDAYS_FULL[s.payroll.paydayWeekday].toLowerCase()} da semana seguinte` : 'no fechamento'}; um saldo inicial de pelo menos ${fmt((weekly + rentW) * 2)} cobre esse intervalo.` : 'Desligado: as contas fixas saem do saldo só quando a semana é fechada.') +
+    // pedir empréstimo fica para uma próxima versão (aba Banco); quem já tinha um registrado continua vendo
+    (L.on ? `<div class="field full">${F.chk('settings.loan.on', 'Empréstimo ativo')}</div>` : hint('Empréstimo: em breve, pela aba Banco.')) +
     (L.on ? F.num('bank.loanTotal', 'Valor devido', { money: true }) + F.num('settings.loan.installment', 'Valor da parcela', { money: true }) +
       F.sel('settings.loan.freq', 'Frequência da parcela', [['monthly', 'Mensal (a cada 30 dias)'], ['weekly', 'Semanal']]) +
       F.num('settings.loan.rate', 'Juros ao mês', { pct: true, hint: 'Sobre o saldo devedor, em cada parcela.' }) +
@@ -135,7 +136,7 @@ function ajustes() {
     F.sel('settings.costs.mealsMode', 'Como contar as refeições', [['trip', 'Lançar em cada viagem'], ['day', 'Automático por dia trabalhado']], { full: true }) +
     (cs.mealsMode === 'day' ? `<div class="field full">${(L => L.row + L.box)(labRow('settings.costs.auto', 'Refeições automáticas em cada dia com viagem de caminhão'))}<div class="checks">${F.chk('settings.costs.auto.breakfast', 'Café')}${F.chk('settings.costs.auto.lunch', 'Almoço')}${F.chk('settings.costs.auto.dinner', 'Jantar')}</div></div>` : '') +
     costField('breakfast', 'Café da manhã', 'Por café') + costField('lunch', 'Almoço', 'Por almoço') + costField('dinner', 'Jantar', 'Por jantar') +
-    costField('hotel', 'Noite em hotel', 'Por noite lançada na viagem') + costField('housing', 'Moradia', 'Por semana fechada'),
+    costField('hotel', 'Noite em hotel', 'Por noite lançada na viagem') + costField('housing', 'Moradia (aluguel)', 'Por semana; você paga na aba Vida'),
     `${cs.mealsMode === 'day' ? 'Refeições por dia: ' + (meals.join(', ') || 'nenhuma') : 'Refeições por viagem'} · moradia ${fmt(cs.housing.val)}/semana`)}
   ${mod('Impostos', `Tabela federal de 2026. O tipo vem da classificação do contrato: ${c && taxTypeFor(c.classification) === '1099' ? '1099, autônomo' : 'W-2, empregado'}.`, null,
     F.sel('settings.taxes.filing', 'Declaração', [['single', 'Solteiro'], ['married', 'Casado (conjunta)']]) +

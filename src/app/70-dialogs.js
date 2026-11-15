@@ -220,14 +220,16 @@ function openTrip(id, prefill = null, onSaved = null) {
 
 async function closeWeekFlow() {
   const s = SS(), plan = weekClosePlan(), d = plan.d;
-  const payday = s.payroll.lagOn ? E.paydayFor(S.week.start, s) : S.gameDay;
-  const ok = await confirmBox(`Fechar semana ${weekLabel(S.week.start).toLowerCase()}?`,
-    `<p style="margin:0 0 8px">As viagens vão para o histórico e o diário começa vazio.</p>
+  // fechar antes do fim da semana (ex.: na sexta) encerra o período hoje; o fim de semana segue para o próximo
+  const end = periodEnd(S), early = end < S.week.start + 6;
+  const payday = s.payroll.lagOn ? E.paydayFor(end, s) : S.gameDay;
+  const ok = await confirmBox(`Fechar semana ${weekLabel(S.week.start, end).toLowerCase()}?`,
+    `<p style="margin:0 0 8px">As viagens vão para o histórico e o diário começa vazio.${early ? ` O dia do jogo continua no ${dayFull(S.gameDay).toLowerCase()}: o que você lançar a partir de amanhã (dia ${end + 1}) entra no próximo holerite.` : ''}</p>
      <table class="bk"><tbody>
        <tr><td>Salário bruto${plan.safety ? ' (inclui bônus de segurança ' + fmt(plan.safety) + ')' : ''}</td><td>${fmt(d.revenue)}</td></tr>
        <tr><td>(−) Impostos e descontos</td><td>${fmt(d.deductions.total)}</td></tr>
        <tr class="t"><td>(=) Líquido do holerite</td><td>${fmt(d.takeHome)}</td></tr>
-       <tr><td>(−) Despesas e custo de vida</td><td>${fmt(plan.living)}</td></tr>
+       <tr><td>(−) Despesas da semana (viagens e caminhão)</td><td>${fmt(plan.living)}</td></tr>
        <tr class="t"><td>(=) Lucro líquido</td><td>${fmt(d.net)}</td></tr>
      </tbody></table>
      ${plan.viol.length ? `<div class="banner" style="margin-top:10px;flex-direction:column;align-items:flex-start;gap:4px"><b>${plan.viol.length} infraç${plan.viol.length === 1 ? 'ão' : 'ões'} de jornada nesta semana</b><span style="font-size:13px">${plan.viol.map(v => `Dia ${v.day}: ${esc(v.text)}`).join('<br>')}</span><span class="muted" style="font-size:12.5px">${s.hos.penalties ? `Ao fechar: ${s.hos.resetSafety ? 'o bônus de segurança zera; ' : ''}cada infração tem ${fmtN(s.hos.inspectChance)}% de chance de ser pega numa fiscalização, com multa de ${fmt(s.hos.fine)}.` : 'Consequências desligadas: só ficam registradas.'}</span></div>` : ''}
@@ -236,13 +238,13 @@ async function closeWeekFlow() {
   let week;
   commit(st => {
     const start = st.week.start, trips = st.week.trips;
-    week = { id: 'w' + start + '-' + uid().slice(0, 4), start, end: start + 6, trips: clone(trips), dre: d, settings: clone(s), closedDay: st.gameDay, contractId: st.currentContractId };
+    week = { id: 'w' + start + '-' + uid().slice(0, 4), start, end, trips: clone(trips), dre: d, settings: clone(s), closedDay: st.gameDay, contractId: st.currentContractId };
     const ids = new Set(trips.map(t => 'trip:' + t.id));
     st.ledger.forEach(e => { if (ids.has(e.ref)) e.locked = true; });
-    const p = { id: uid(), weekStart: start, amount: d.takeHome, status: 'pending', payday,
+    const p = { id: uid(), weekStart: start, weekEnd: end, amount: d.takeHome, status: 'pending', payday,
       breakdown: { gross: d.revenue, ded: d.deductions.total, takeHome: d.takeHome, living: plan.living, net: d.net, tax: d.taxType, safety: plan.safety } };
     st.payroll.push(p);
-    if (plan.living) st.ledger.push({ id: uid(), ref: 'living:' + p.id, day: st.gameDay, desc: `Despesas e custo de vida · semana ${weekLabel(start).toLowerCase()}`, amount: -plan.living, locked: true });
+    if (plan.living) st.ledger.push({ id: uid(), ref: 'living:' + p.id, day: st.gameDay, desc: `Despesas da semana (viagens e caminhão) · ${weekLabel(start, end).toLowerCase()}`, amount: -plan.living, locked: true, detail: plan.livingDetail });
     if (!s.payroll.lagOn) payEntry(st, p, st.gameDay); else autoPay(st);
     st.career.safetyStreak = plan.newStreak;
     compact(st);
@@ -256,7 +258,8 @@ async function closeWeekFlow() {
     }
     week.violations = plan.viol;
     st.career.k401 = E.r2(E.n(st.career.k401) + E.n(d.deductions.k401));
-    st.week = { start: Math.max(E.weekStartOf(st.gameDay, s), start + 7), trips: [] };
+    // próximo período começa no dia seguinte ao fim deste (sábado, se fechou na sexta); o dia do jogo não muda
+    st.week = { start: end + 1, trips: [] };
   });
   H.push(week); H.sort((a, b) => a.start - b.start); saveLocal(); saveWeekRemote(week);
   const caughtNow = (S.career.violations || []).filter(v => v.week === week.start && v.caught);

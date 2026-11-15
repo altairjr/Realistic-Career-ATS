@@ -22,6 +22,7 @@ src/
     14-sync-cloud.js   Sincronização em servidor próprio (Supabase) com login
     20-state.js        Carreira, empresas, contratos, regras efetivas, normalização
     22-ledger.js       Extrato, contas fixas, empréstimo, infrações, fechamento
+    32-bank.js         Abas Banco (extrato detalhado) e Vida (aluguel)
     30-views.js        Painel, Diário, Holerite e Histórico
     40-help.js         Textos de ajuda e guia das regras
     50-forms.js        Campos e blocos recolhíveis

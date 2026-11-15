@@ -57,6 +57,7 @@ $('#view').addEventListener('click', async e => {
   if (a === 'drafts') return draftsFlow();
   if (await telemetryAction(a)) return;
   if (await telemetryControlAction(a, el)) return;
+  if (await lifeAction(a, el)) return;
   if (a === 'new-trip') openTrip();
   if (a === 'new-contract') return newContractFlow(el.dataset.co);
   if (a === 'suggest-cpm') { const ex = EXPERIENCE.find(x => x[0] === S.profile.experience) || EXPERIENCE[0]; commit(st => { st.contracts.find(x => x.id === st.currentContractId).terms.contract.cpm.rate = E.r2((ex[2] + ex[3]) / 2); }); toast('CPM ajustado pela experiência'); }

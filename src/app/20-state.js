@@ -66,6 +66,13 @@ function normalize(st) {
   st.gameDay = Math.max(1, parseInt(st.gameDay) || 1);
   st.career = Object.assign({ safetyStreak: 0, k401: 0, startDay: 1, loanNext: null, violations: [] }, st.career || {});
   if (st.career.billedThrough === undefined) st.career.billedThrough = st.gameDay;   // sem cobrança retroativa
+  // v0.22: o aluguel deixou de sair sozinho (pago na aba Vida). Semanas já cobradas contam como pagas:
+  // a semana atual, se a moradia já saiu pelo calendário; senão, até a semana passada.
+  if (!st.career.rent || typeof st.career.rent.paidThrough !== 'number') {
+    const cur = E.weekStartOf(st.gameDay, st.settings);
+    const billed = (st.ledger || []).some(e => e.ref === 'bill:' + cur && /^Moradia/.test(e.desc || ''));
+    st.career.rent = { paidThrough: billed ? cur : cur - 7 };
+  }
   st.week = st.week || { start: 1, trips: [] };
   st.week.trips = st.week.trips || [];
   st.payroll = st.payroll || [];
@@ -141,7 +148,7 @@ const contractPeriod = c => `Dia ${c.startDay} – ${c.endDay ? 'dia ' + c.endDa
 const shortCls = cls => E.PRESETS[E.presetKeyFor(cls)];
 const balance = st => E.r2(E.n(st.bank.opening) + E.n(st.bank.archived) + st.ledger.reduce((a, e) => a + E.n(e.amount), 0));
 const pendingPay = st => E.r2(st.payroll.filter(p => p.status !== 'paid').reduce((a, p) => a + E.n(p.amount), 0));
-const weekLabel = start => `Dia ${start}–${start + 6}`;
+const weekLabel = (start, end) => `Dia ${start}–${end ?? start + 6}`;
 const dayFull = d => `Dia ${d} · ${E.dayLabel(d, S.settings)}`;
 
 const carLabel = t => (t.car && t.car.mode === 'owned') ? 'Carro próprio' : 'Carro emprestado';
@@ -166,5 +173,5 @@ function payEntry(st, p, day) {
   if (p.status === 'paid') return;
   p.status = 'paid'; p.paidDay = day;
   const label = p.breakdown && p.breakdown.tax === '1099' ? 'Acerto (settlement)' : 'Holerite';
-  st.ledger.push({ id: uid(), ref: 'pay:' + p.id, day, desc: `${label} · semana ${weekLabel(p.weekStart).toLowerCase()}`, amount: p.amount, locked: true });
+  st.ledger.push({ id: uid(), ref: 'pay:' + p.id, day, desc: `${label} · semana ${weekLabel(p.weekStart, p.weekEnd).toLowerCase()}`, amount: p.amount, locked: true });
 }

@@ -107,16 +107,70 @@ test('telas: todas as abas sem rolagem lateral e sem erros, no celular e no PC',
   for (const vp of [{ width: 360, height: 760 }, { width: 1280, height: 900 }]) {
     const { ctx, page } = await device(vp);
     await openApp(page); await createCareer(page); await importFixture(page);
-    for (const t of ['painel', 'diario', 'holerite', 'historico', 'carreira', 'ajustes']) {
-      await page.click(`[data-tab="${t}"]`);
+    for (const t of ['painel', 'diario', 'holerite', 'banco', 'vida', 'historico', 'carreira', 'ajustes']) {
+      await page.click(`[data-tab="${t}"]`); await shot(page, `aba-${t}-${vp.width}`);
       assert.ok(await overflow(page) <= 0, `${t} em ${vp.width}px tem rolagem lateral`);
     }
+    // os 8 nomes das abas cabem sem cortar
+    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('nav.tabs button')].filter(b => b.scrollWidth > b.clientWidth + 1).map(b => b.dataset.tab)), [], `nomes de abas cortados em ${vp.width}px`);
     await page.click('[data-tab="diario"]'); await page.locator('[data-edit]').first().click();
     await page.waitForSelector('#modalRoot .sheet');
     assert.ok(await overflow(page) <= 0, `formulário de viagem em ${vp.width}px tem rolagem lateral`);
     assert.deepEqual(page.errors, []);
     await ctx.close();
   }
+});
+
+test('banco e vida: extrato com o detalhe de cada valor e aluguel pago pelo jogador', { skip }, async () => {
+  const { ctx, page } = await device({ width: 390, height: 844 });
+  await openApp(page); await createCareer(page); await importFixture(page);
+  await page.click('[data-tab="holerite"]');
+  assert.equal(await page.locator('.ledger').count(), 0, 'o extrato saiu do Holerite');
+  await page.click('[data-goto="banco"]');
+  await page.waitForSelector('.bank-card');
+  const item = page.locator('details.lx').filter({ hasText: 'custo de vida' }).first();
+  assert.equal(await item.evaluate(d => d.open), false, 'recolhido por padrão');
+  await item.locator('summary').click();
+  const lines = await item.locator('.lx-body td:first-child').allTextContents();
+  assert.ok(lines.some(l => /Moradia|Almoços|Combustível|Cafés|Jantas/.test(l)), 'mostra do que é feito o total: ' + lines.join(' | '));
+  await page.click('[data-act="ledger-all"]');
+  assert.equal(await page.evaluate(() => [...document.querySelectorAll('details.lx')].every(d => d.open)), true, '+ Detalhes abre todos');
+  assert.ok(await page.locator('button:has-text("Pedir empréstimo")').isDisabled(), 'empréstimo desabilitado por enquanto');
+  await shot(page, 'banco-detalhes');
+  // aluguel: não sai sozinho; pagar quita a semana mais antiga
+  await page.click('[data-tab="vida"]');
+  const open0 = await page.evaluate(() => rentInfo().open.length), bal0 = await page.evaluate(() => balance(S));
+  assert.ok(open0 >= 1);
+  await shot(page, 'vida');
+  await page.click('[data-act="rent-pay"][data-n="1"]');
+  await page.waitForFunction(n => rentInfo().open.length === n - 1, open0);
+  assert.equal(await page.evaluate(() => balance(S)), +(bal0 - await page.evaluate(() => rentInfo().value)).toFixed(2), 'o aluguel sai do saldo quando o jogador paga');
+  await page.click('[data-tab="banco"]');
+  const rent = page.locator('details.lx').filter({ hasText: 'Aluguel' }).first();
+  await rent.locator('summary').click();
+  assert.match((await rent.locator('.lx-body').textContent()), /Aluguel da semana/);
+  assert.deepEqual(page.errors, []);
+  await ctx.close();
+});
+
+test('fechar a semana antes do fim: o dia não avança e o fim de semana entra no próximo holerite', { skip }, async () => {
+  const { ctx, page } = await device({ width: 390, height: 844 });
+  await openApp(page); await createCareer(page); await importFixture(page);
+  const before = await page.evaluate(() => ({ day: S.gameDay, start: S.week.start }));
+  assert.ok(before.day < before.start + 6, 'a planilha de exemplo para no meio da semana');
+  await page.click('[data-tab="painel"]'); await page.click('section [data-act="close-week"]');
+  await page.waitForSelector('#modalRoot .sheet');
+  assert.match(await page.locator('#modalRoot .sheet').textContent(), /continua no dia/);
+  await page.locator('#modalRoot .sheet button.primary').last().click();
+  await page.waitForFunction(() => S.week.trips.length === 0);
+  const after = await page.evaluate(() => ({ day: S.gameDay, start: S.week.start, end: S.payroll.at(-1).weekEnd, label: document.querySelector('h2.hrow').textContent }));
+  assert.equal(after.day, before.day, 'o dia do jogo não muda ao fechar');
+  assert.equal(after.end, before.day); assert.equal(after.start, before.day + 1);
+  // lançar no dia seguinte (fim de semana) cai no novo período
+  await page.click('#dayPlus'); await page.click('#dayPlus');
+  assert.equal(await page.evaluate(() => S.week.start), before.day + 1, 'o período novo não pula para segunda');
+  assert.deepEqual(page.errors, []);
+  await ctx.close();
 });
 
 test('planilha: importa o modelo, exporta no mesmo modelo e a exportada volta igual', { skip }, async () => {
