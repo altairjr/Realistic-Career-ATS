@@ -197,7 +197,8 @@ test('simulação: warp ao abrir o jogo, tempo de carga após a entrega e avanç
     fs.writeFileSync(cfg, 'uset g_console "0"\nuset g_developer "1"\n');
     assert.equal(consoleState(logFile), 'off'); assert.equal(consoleState(null), 'unknown');
     fs.writeFileSync(cfg, 'uset g_console "1"\nuset g_developer "1"\n');
-    const r = createRunner({ dir, url, key: 'sb_publishable_teste', gameLogPath: logFile, now: () => Date.parse(at(20, 12, 0)), notify: n => notes.push(n) });
+    let clock = Date.parse(at(20, 12, 0));
+    const r = createRunner({ dir, url, key: 'sb_publishable_teste', gameLogPath: logFile, now: () => clock, notify: n => notes.push(n) });
     await r.login('a@teste.com', 'senha-forte-1');
     write([{ t: 'start', game: 'ats', plugin: '0.3.0', real: at(20, 0, 6) }, { t: 'time', gameTime: 870, real: at(20, 1, 0) }]);
     await r.cycle();
@@ -210,7 +211,7 @@ test('simulação: warp ao abrir o jogo, tempo de carga após a entrega e avanç
     write(delivery(at(20, 10, 0), 'Elko', 1000, 900)); await r.cycle();
     assert.doesNotMatch(fs.readFileSync(CMD, 'utf8'), /avancar/);
     plugin(['warp 0.9'], at(20, 10, 30)); await r.cycle();
-    assert.match(fs.readFileSync(CMD, 'utf8'), /^id \d+\nbase \d+\navancar 60\n$/, 'tempo de carga, sem repetir o warp');
+    assert.match(fs.readFileSync(CMD, 'utf8'), /^id \d+\nsublinhado unicode\nbase \d+\navancar 60\n$/, 'tempo de carga, sem repetir o warp');
     assert.ok(notes.some(n => n.type === 'sim' && n.cmd.text === 'warp 0.9'));
     assert.equal(m.db.status.get(uid).sim_last.text, 'warp 0.9', 'o app vê o último comando aplicado');
     // pedidos do overlay se juntam enquanto o plugin não lê
@@ -222,6 +223,13 @@ test('simulação: warp ao abrir o jogo, tempo de carga após a entrega e avanç
     // teclas que não chegaram ao console: sem eco no game.log, o comando vira erro (com o relógio do teste andando)
     plugin(['g_set_time 20 30'], at(20, 11, 10), false, { target: 1230 });
     await r.cycle(); assert.ok(!notes.some(n => n.type === 'sim' && n.cmd.text === 'hora do jogo 20:30'));
+    // 15 s sem eco: tenta de novo uma vez, digitando o "_" do outro jeito
+    clock += 20e3; await r.cycle();
+    assert.match(fs.readFileSync(CMD, 'utf8'), /sublinhado shift\n[\s\S]*hora 20 30/);
+    plugin(['g_set_time 20 30'], at(20, 11, 12), false, { target: 1230 }); await r.cycle();
+    clock += 20e3; await r.cycle();
+    assert.ok(notes.some(n => n.type === 'sim' && n.cmd.ok === false && /não recebeu/.test(n.cmd.text)), 'segunda falha: avisa');
+    assert.ok(!fs.existsSync(CMD), 'não fica tentando para sempre');
     assert.equal(r.setTime(25, 0).ok, false);
     assert.equal(r.snapshot().simInfo.console, 'ok');
     // console desligado: recusa com o motivo

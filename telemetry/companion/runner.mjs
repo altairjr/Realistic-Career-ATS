@@ -43,7 +43,7 @@ export function createRunner(opts) {
   const load = (f, d) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch (e) { return d; } };
 
   const saved = load(STATE, {});
-  const S = { offset: saved.offset || 0, core: Object.assign(createState(), saved.core || {}), queue: saved.queue || [], status: saved.status || null, lastDelivery: saved.lastDelivery || null, times: saved.times || {} };
+  const S = { offset: saved.offset || 0, core: Object.assign(createState(), saved.core || {}), queue: saved.queue || [], status: saved.status || null, lastDelivery: saved.lastDelivery || null, times: saved.times || {}, underscore: saved.underscore || 'unicode' };
   // controle: coleta ligada e perfil ligado à carreira. Vem da conta; a cópia local vale sem internet.
   const control = Object.assign({ collect: true, linkedProfile: null, sim: null }, load(CONTROL, {}));
   let session = load(SESSION, null);
@@ -51,10 +51,10 @@ export function createRunner(opts) {
   let lastStatusSent = null, lastBeat = 0, busy = false;
   const info = { sendError: null, lastCycle: null, lastSim: null, simWarned: null, noSimCols: false };
   const CMD = join(dir, CMD_FILE);
-  let verify = [], usedEcho = new Set(), simQueue = [], simSeq = Math.floor(now() / 1000) % 1e6, warpDone = null;
+  let verify = [], usedEcho = new Set(), retryIds = new Set(), retryNext = false, simQueue = [], simSeq = Math.floor(now() / 1000) % 1e6, warpDone = null;
   const sim = () => cleanSim(control.sim);
 
-  const persist = () => writeFileSync(STATE, JSON.stringify({ offset: S.offset, core: S.core, queue: S.queue, status: S.status, lastDelivery: S.lastDelivery, times: S.times }));
+  const persist = () => writeFileSync(STATE, JSON.stringify({ offset: S.offset, core: S.core, queue: S.queue, status: S.status, lastDelivery: S.lastDelivery, times: S.times, underscore: S.underscore }));
   const saveControl = () => writeFileSync(CONTROL, JSON.stringify(control));
   // a pausa também desliga o plugin: ele confere este arquivo antes de gravar
   const syncPauseFlag = () => { const f = join(dir, PAUSE_FLAG); if (control.collect) rmSync(f, { force: true }); else if (!existsSync(f)) writeFileSync(f, 'Coleta pausada pelo Carreira Realista. Apague este arquivo para voltar a coletar.\n'); };
@@ -130,7 +130,7 @@ export function createRunner(opts) {
         }
         if (o.type === 'cmd') {
           // digitado: falta confirmar no game.log que o console do jogo executou (as teclas podem não ter chegado)
-          if (o.cmd.ok) verify.push({ cmd: o.cmd, target: typeof rec.target === 'number' ? rec.target : null, prof: prof || currentProfile(gameLog), since: Date.parse(rec.real || '') || now(), deadline: now() + 15e3 });
+          if (o.cmd.ok) verify.push({ retried: retryIds.has(o.cmd.id), cmd: o.cmd, target: typeof rec.target === 'number' ? rec.target : null, prof: prof || currentProfile(gameLog), since: Date.parse(rec.real || '') || now(), deadline: now() + 15e3 });
           else simDone(o.cmd, false, o.cmd.error);
         }
         if (o.type === 'status') S.status = Object.assign({}, o.status, { blocked: why });
@@ -165,6 +165,12 @@ export function createRunner(opts) {
           if (S.status && !S.status.blocked) S.status = Object.assign({}, S.status, { game_time: v.target });
         }
         simDone(v.cmd, true, v.cmd.text); return false;
+      }
+      if (now() > v.deadline && !v.retried && v.target !== null && v.cmd.console.some(c => c.includes('_'))) {
+        // o "_" de g_set_time não chegou certo: tenta uma vez o outro jeito de digitar e guarda o que funcionar
+        S.underscore = S.underscore === 'shift' ? 'unicode' : 'shift';
+        log(`O jogo não recebeu "${v.cmd.console.join('; ')}". Tentando de novo com outro jeito de digitar "_".`);
+        simQueue.push({ hour: [Math.floor(v.target / 60) % 24, v.target % 60] }); retryNext = true; return false;
       }
       if (now() > v.deadline) { simDone(v.cmd, false, `o jogo não recebeu "${v.cmd.console.join('; ')}" (o console não abriu ou as teclas não chegaram)`); return false; }
       return true;
@@ -203,6 +209,8 @@ export function createRunner(opts) {
     if (warp != null) lines.push(`warp ${warp}`);
     if (hour) lines.push(`hora ${hour[0]} ${hour[1]}`);
     if (advance) lines.push(`avancar ${Math.min(2880, advance)}`);
+    if (hour || advance) lines.splice(1, 0, `sublinhado ${S.underscore}`);
+    if (retryNext) { retryIds.add(String(simSeq)); retryNext = false; }
     writeFileSync(CMD + '.tmp', lines.join('\n') + '\n'); renameSync(CMD + '.tmp', CMD);
     simQueue = [];
   }

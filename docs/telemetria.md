@@ -52,6 +52,7 @@ Ajuste em *Ajustes › Telemetria do jogo › Simulação no jogo*; o programa d
 - **No menu do Esc o jogo não informa a hora** (o SDK para de enviar dados quando o jogo pausa). Para avançar o tempo ali, o programa do PC manda a última hora conhecida daquele perfil (a do fim da última sessão, que é a do save automático) e o plugin calcula a partir dela. Depois de aplicar, a hora nova vale até o jogo informar a real (v0.21.1).
 - **Confirmação no game.log** (v0.21.2): o console do jogo repete no `game.log.txt` cada comando que executa. O programa só considera o comando aplicado (e só então muda a hora do jogo no app) quando acha essa repetição; se ela não aparecer em 15 s, avisa que o jogo não recebeu o comando.
 - **Digitação compassada** (v0.21.2, plugin 0.3.2): uma tecla por quadro, com 35 ms entre elas. Digitar tudo de uma vez fazia o jogo perder as letras.
+- **O "_" de `g_set_time`** (v0.21.3, plugin 0.3.3): digitado com Shift, o jogo deixava o Shift preso e o resto saía em maiúsculas (`'G_SET_TIME 6 0' - unknown command` no game.log). Agora o "_" vai como caractere direto, sem Shift. Se o jogo não confirmar, o programa tenta uma vez do outro jeito e guarda o que funcionou.
 - A tecla do console usada é a que fica abaixo do Esc (\` no teclado americano, ' no ABNT2).
 - Nada é aplicado com a coleta pausada, em perfil não ligado ou com o jogo fechado.
 

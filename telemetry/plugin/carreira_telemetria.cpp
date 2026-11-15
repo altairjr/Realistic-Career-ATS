@@ -44,7 +44,7 @@
 
 #include "scssdk_telemetry.h"
 
-#define PLUGIN_VERSION "0.3.2"
+#define PLUGIN_VERSION "0.3.3"
 #define PLUGIN_TAG "[carreira-telemetria] "
 
 // Exporta as duas funções que o jogo procura, com o nome exato, seja qual for a ligação declarada no SDK.
@@ -260,7 +260,8 @@ unsigned scan_of(char c, bool &shift) {
 }
 /* Fila de teclas: uma tecla por quadro, com intervalo. O jogo lê o teclado a cada quadro; apertar e soltar no
    mesmo instante (tudo de uma vez) faz o console perder as letras. Cada passo: tecla descendo ou subindo + espera. */
-struct KeyStep { unsigned sc; bool up; int wait_ms; std::string mark; };
+struct KeyStep { unsigned sc; bool up; int wait_ms; std::string mark; bool uni = false; };   // uni: caractere direto (sc = código do caractere)
+bool underscore_unicode = true;   // "_" sem Shift (o jogo travava o Shift e o resto saía em maiúsculas); "sublinhado shift" volta ao Shift
 std::vector<KeyStep> keys;
 size_t key_pos = 0;
 bool shift_down = false; unsigned held = 0;
@@ -283,11 +284,13 @@ void add_mark(const std::string &text, int wait_after) {
 void queue_console(int wait_after) { add_key(console_scancode, wait_after); add_mark("<console>", wait_after); }
 void queue_line(const std::string &text) {
 #if defined(_WIN32)
+	keys.push_back({ 0x2A, true, KEY_MS, "" }); keys.push_back({ 0x36, true, KEY_MS, "" });   // nenhum Shift apertado antes de digitar
 	for (char c : text) {
 		bool sh; const unsigned sc = scan_of(c, sh); if (!sc) continue;
+		if (c == '_' && underscore_unicode) { KeyStep d{ static_cast<unsigned>('_'), false, KEY_MS, "" }; d.uni = true; KeyStep u = d; u.up = true; keys.push_back(d); keys.push_back(u); continue; }
 		if (sh) keys.push_back({ 0x2A, false, KEY_MS, "" });
 		keys.push_back({ sc, false, KEY_MS, "" }); keys.push_back({ sc, true, KEY_MS, "" });
-		if (sh) keys.push_back({ 0x2A, true, KEY_MS, "" });
+		if (sh) { keys.push_back({ 0x2A, true, KEY_MS, "" }); keys.push_back({ 0x2A, true, KEY_MS, "" }); }
 	}
 #endif
 	add_key(0x1C, 300);   // Enter
@@ -295,9 +298,10 @@ void queue_line(const std::string &text) {
 }
 void send_step(const KeyStep &k) {
 #if defined(_WIN32)
-	INPUT in{}; in.type = INPUT_KEYBOARD; in.ki.wScan = static_cast<WORD>(k.sc); in.ki.dwFlags = KEYEVENTF_SCANCODE | (k.up ? KEYEVENTF_KEYUP : 0);
+	INPUT in{}; in.type = INPUT_KEYBOARD; in.ki.wScan = static_cast<WORD>(k.sc); in.ki.dwFlags = (k.uni ? KEYEVENTF_UNICODE : KEYEVENTF_SCANCODE) | (k.up ? KEYEVENTF_KEYUP : 0);
 	SendInput(1, &in, sizeof in);
-	if (k.sc == 0x2A) shift_down = !k.up; else held = k.up ? 0 : k.sc;
+	if (k.uni) return;
+	if (k.sc == 0x2A || k.sc == 0x36) shift_down = !k.up; else held = k.up ? 0 : k.sc;
 #else
 	FILE *f = std::fopen((out_dir + "/teclado.txt").c_str(), "ab"); if (f) { std::fputs(k.mark.c_str(), f); std::fputc('\n', f); std::fclose(f); }
 #endif
@@ -336,6 +340,7 @@ const char *load_commands() {
 		// ainda não informou a hora nesta sessão, como no menu do Esc logo depois de carregar o perfil
 		// (o programa do PC sabe a hora mais recente: a do jogo e a dos comandos confirmados; com o jogo pausado o plugin fica sem ela)
 		else if (op == "base") { unsigned long b = 0; if (in >> b) { t = static_cast<scs_u32_t>(b); known = true; } }
+		else if (op == "sublinhado") { std::string m; in >> m; underscore_unicode = m != "shift"; }
 		else if (op == "tecla") { unsigned sc = 0; if (in >> sc && sc > 0 && sc < 0x80) console_scancode = sc; }
 		else if (op == "warp") {
 			double w = 0; if (!(in >> w) || !(w >= 0.1 && w <= 10.0)) return "valor de warp inválido";

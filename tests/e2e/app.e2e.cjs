@@ -293,7 +293,10 @@ test('overlay: modo compacto com botão de esconder quando aberto pelo app de PC
   await page.waitForFunction(() => (document.getElementById('ovClockNow') || {}).textContent === 'Dia 1 · 14:30');
   await page.click('[data-act="ov-adv"][data-min="240"]');
   assert.deepEqual(await page.evaluate(() => window.__adv), [240]);
-  await page.fill('#ovH', '07:15'); await page.click('[data-act="ov-set"]');
+  assert.equal(await page.inputValue('#ovH'), '15:00', 'sugere a próxima hora cheia do jogo');
+  await page.fill('#ovH', '07:15'); await page.evaluate(() => render());
+  assert.equal(await page.inputValue('#ovH'), '07:15', 'a hora escolhida não volta ao padrão quando a tela atualiza');
+  await page.click('[data-act="ov-set"]');
   assert.deepEqual(await page.evaluate(() => window.__set), [[7, 15]]);
   await page.waitForSelector('text=jogo fechado');
   assert.equal(await page.evaluate(() => document.documentElement.classList.contains('overlay')), true);
