@@ -156,7 +156,7 @@ function handlers() {
   ipcMain.handle('open-folder', () => shell.openPath(DIR));
   ipcMain.handle('toggle-overlay', () => toggleOverlay());
   ipcMain.handle('hide-overlay', () => hideOverlay());
-  // tempo no jogo (overlay): o pedido vai para o plugin, que digita no console quando você volta ao jogo com o caminhão parado
+  // tempo no jogo (overlay): o pedido vai para o plugin, que digita no console quando você volta ao jogo (menu do Esc, sem caminhão ou parado)
   ipcMain.handle('game-clock', () => { const s = runner.snapshot(); return { online: s.game.online, gameTime: s.game.gameTime, sim: s.simInfo, settings: s.control.sim }; });
   ipcMain.handle('advance-time', (e, minutes) => { const r = runner.advanceTime(minutes); if (r.ok) pushLog(`Pedido: avançar ${Math.round(minutes / 60 * 10) / 10} h no jogo.`); refreshUi(); return r; });
   ipcMain.handle('set-time', (e, h, m) => { const r = runner.setTime(h, m); if (r.ok) pushLog(`Pedido: hora do jogo ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}.`); refreshUi(); return r; });

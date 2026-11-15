@@ -45,14 +45,16 @@ export function apply(state, rec) {
 
   switch (rec.t) {
     case 'start':
-      state.online = true; state.session = rec.real || String(Date.now()); state.plugin = rec.plugin || null; state.game = rec.game === 'eut2' ? 'ets2' : 'ats'; state.gameVersion = (String(rec.gameName || '').match(/\d+\.\d+[\w.]*/) || [rec.gameVersion || ''])[0];
+      state.online = true; state.inWorld = false; state.session = rec.real || String(Date.now()); state.plugin = rec.plugin || null; state.game = rec.game === 'eut2' ? 'ets2' : 'ats'; state.gameVersion = (String(rec.gameName || '').match(/\d+\.\d+[\w.]*/) || [rec.gameVersion || ''])[0];
       out.push({ type: 'log', text: `Jogo aberto (${rec.gameName || state.game}, plugin ${rec.plugin || '?'}).${rec.gameplayEvents === false ? ' Atenção: esta versão do jogo não envia eventos de entrega.' : ''}` });
       status(); break;
     case 'stop':
       state.online = false; out.push({ type: 'log', text: 'Jogo fechado.' }); status(); break;
     case 'time':
+      state.inWorld = true;   // o relógio do jogo só chega com um perfil carregado
       out.push({ type: 'log', text: `Dia ${gameDayOf(rec.gameTime)} no jogo.` }); status(); break;
     case 'truck': {
+      state.inWorld = true;
       const t = [rec.attrs && rec.attrs.brand, rec.attrs && rec.attrs.name].filter(Boolean).join(' ');
       if (t && t !== state.truck) { state.truck = t; status(); }
       break;

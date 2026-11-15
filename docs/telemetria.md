@@ -44,10 +44,10 @@ Depois disso é só jogar: com a opção **Abrir este programa junto com o jogo*
 
 ### Simulação no jogo (v0.21)
 Ajuste em *Ajustes › Telemetria do jogo › Simulação no jogo*; o programa do PC aplica no jogo digitando no console por você.
-- **Warp ao abrir o jogo** (padrão 0,9 quando ligado): aplicado uma vez em cada sessão do jogo, no perfil ligado. Desligar volta ao `warp 1`.
+- **Warp ao abrir o jogo** (padrão 0,9 quando ligado): aplicado assim que você entra no perfil ligado (ainda no menu, sem precisar dirigir), uma vez por sessão do jogo e de novo se trocar de perfil. Desligar volta ao `warp 1`.
 - **Tempo de carga** (padrão 1 h quando ligado): depois de cada entrega, o relógio do jogo avança esse tempo (`g_set_time`).
 - **Overlay › Tempo no jogo**: relógio do jogo e botões +1 h, +2 h, +4 h, +8 h e "Ir para" uma hora. `g_set_time` só anda para frente; uma hora menor que a atual é a do dia seguinte.
-- **Quando o comando é digitado**: o pedido fica na fila (`comando.txt`) até o jogo estar em foco, sem pausa, com o caminhão parado há 1,5 s. O plugin abre o console, digita, aperta Enter e fecha. O resultado aparece num aviso do Windows, no painel do PC e no app ("Último aplicado no jogo").
+- **Quando o comando é digitado**: o pedido fica na fila (`comando.txt`) até o jogo estar em foco com um perfil carregado, há 1,5 s no menu do Esc (pausado), sem caminhão ou com o caminhão parado (dirigindo, espera parar). O plugin abre o console, digita, aperta Enter e fecha. O resultado aparece num aviso do Windows, no painel do PC e no app ("Último aplicado no jogo").
 - **Precisa do console ligado**: em `Documentos\American Truck Simulator\config.cfg`, com o jogo fechado, `uset g_console "1"` e `uset g_developer "1"`. Sem isso o programa não manda nada (as letras virariam comandos de direção).
 - A tecla do console usada é a que fica abaixo do Esc (\` no teclado americano, ' no ABNT2).
 - Nada é aplicado com a coleta pausada, em perfil não ligado ou com o jogo fechado.

@@ -142,14 +142,17 @@ export function createRunner(opts) {
     if (!control.collect) return 'paused';
     if (S.status && S.status.blocked) return 'profile';
     if (!S.core.online) return 'offline';
+    // warp e tempo só depois de entrar no perfil (no menu principal o jogo ainda não tem relógio)
+    if (!S.core.inWorld || (gameLogPath && !currentProfile(gameLog))) return 'loading';
     if (consoleState(gameLogPath) === 'off') return 'console';
     return null;
   }
-  const SIM_WHY = { paused: 'coleta pausada', profile: 'perfil do jogo não ligado à carreira', offline: 'jogo fechado', console: 'o console do jogo está desligado (g_console e g_developer em config.cfg)' };
+  const SIM_WHY = { paused: 'coleta pausada', profile: 'perfil do jogo não ligado à carreira', offline: 'jogo fechado', loading: 'esperando entrar num perfil do jogo', console: 'o console do jogo está desligado (g_console e g_developer em config.cfg)' };
   function simTick() {
     const why = simBlock(), sm = sim();
     if (why) {
       if (why === 'console' && (sm.warpOn || sm.loadOn || simQueue.length) && info.simWarned !== 'console') { log('Simulação parada: ' + SIM_WHY.console + '.'); info.simWarned = 'console'; }
+      if (why === 'loading') return;   // pedidos esperam o perfil carregar
       if (simQueue.length && why !== 'console') log(`Comando do jogo descartado: ${SIM_WHY[why]}.`);
       simQueue = []; rmSync(CMD, { force: true }); return;
     }

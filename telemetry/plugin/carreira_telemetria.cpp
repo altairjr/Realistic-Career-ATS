@@ -18,7 +18,7 @@
      app.vivo             atualizado pelo programa do PC enquanto está aberto
      comando.txt          comandos de simulação (v0.3): o plugin os digita no console do jogo e apaga o arquivo
                             id <n> | warp <x> | avancar <minutos> | hora <h> <m> | tecla <scancode do console>
-                          Só com o jogo em foco, sem pausa e com o caminhão parado há 1,5 s. O resultado vira um
+                          Com o jogo em foco e o perfil carregado, há 1,5 s no menu do Esc (pausado) ou com o caminhão parado. O resultado vira um
                           registro "cmd" no telemetria.jsonl. (O console precisa estar ligado: g_console e g_developer.)
    Instalação: copiar a DLL para <pasta do jogo>\bin\win_x64\plugins\ */
 #include <cstdio>
@@ -232,7 +232,9 @@ bool game_has_focus() {
 	return true;
 #endif
 }
-bool ready_for_console() { return !paused && speed < 0.5f && speed > -0.5f && game_has_focus(); }
+// Pode digitar: jogo em foco e já dentro do perfil (o relógio do jogo chegou). Vale no menu do Esc (pausado)
+// e sem caminhão; dirigindo, espera o caminhão parar para o console não abrir no meio de uma curva.
+bool ready_for_console() { return have_time && game_has_focus() && (paused || (speed < 0.5f && speed > -0.5f)); }
 
 // scancode (teclado americano) e se precisa de Shift; 0 = caractere não suportado
 unsigned scan_of(char c, bool &shift) {

@@ -32,7 +32,7 @@ function render(s) {
   if (sim.warpOn || sim.loadOn) {
     const what = [sim.warpOn ? `warp ${sim.warp}` : '', sim.loadOn ? `+${Math.round(sim.loadMinutes / 6) / 10} h após cada entrega` : ''].filter(Boolean).join(' · ');
     items.push(si.console === 'off' ? check('off', 'Simulação: console do jogo desligado', 'Em Documentos\\American Truck Simulator\\config.cfg mude <b>uset g_console "1"</b> e <b>uset g_developer "1"</b> (com o jogo fechado).')
-      : check(si.block && si.block !== 'offline' ? 'wait' : 'ok', `Simulação: ${esc(what)}`, si.last ? `${si.last.ok ? 'Último aplicado' : 'Último com erro'}: ${esc(si.last.text)}, ${ago(si.last.at)}` : si.pending ? 'Aguardando você voltar ao jogo com o caminhão parado.' : si.why ? esc('Parado: ' + si.why) : ''));
+      : check(si.block && si.block !== 'offline' ? 'wait' : 'ok', `Simulação: ${esc(what)}`, si.last ? `${si.last.ok ? 'Último aplicado' : 'Último com erro'}: ${esc(si.last.text)}, ${ago(si.last.at)}` : si.pending ? 'Aguardando você voltar ao jogo (menu do Esc ou parado).' : si.why ? esc('Parado: ' + si.why) : ''));
   }
   $('checks').innerHTML = items.join('');
   $('pluginBtns').innerHTML = g ? `<button class="primary" data-act="install">${g.installed ? 'Reinstalar plugin' : 'Instalar plugin'}</button>${g.installed ? '<button class="danger" data-act="remove">Remover plugin do jogo</button>' : ''}` : '';

@@ -1,4 +1,4 @@
-# Comandos de simulação: o app pede warp e avançar o tempo; o plugin espera o caminhão parar e digita no console.
+# Comandos de simulação: o app pede warp e avançar o tempo; o plugin espera o caminhão parar (ou o jogo pausado) e digita no console.
 init 1.01
 time 870
 pause 0
@@ -27,5 +27,13 @@ frame 300
 frame 300
 frame 300
 frame 300
+# no menu do Esc (pausado) vale mesmo com o caminhão andando
+speed 15
 pause 1
+file comando.txt id+10|warp+1
+frame 300
+frame 1600
+frame 400
+frame 300
+frame 300
 shutdown
