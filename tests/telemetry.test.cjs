@@ -179,6 +179,73 @@ test('runner: só o perfil ligado envia; outro perfil e coleta pausada não mand
   } finally { await m.close(); fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+test('simulação: warp ao abrir o jogo, tempo de carga após a entrega e avanço pelo overlay viram comando.txt para o plugin', async () => {
+  const { createRunner, consoleState } = await import(path.join(ROOT, 'telemetry', 'companion', 'runner.mjs'));
+  const dir = tmp(), m = createMock(), url = await m.listen();
+  try {
+    await fetch(url + '/auth/v1/signup', { method: 'POST', headers: { apikey: 'x', 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'a@teste.com', password: 'senha-forte-1' }) });
+    const logFile = path.join(dir, 'game.log.txt'), cfg = path.join(dir, 'config.cfg'), data = path.join(dir, 'telemetria.jsonl'), CMD = path.join(dir, 'comando.txt'), notes = [];
+    const write = recs => fs.appendFileSync(data, recs.map(r => JSON.stringify(r)).join('\n') + '\n');
+    // o plugin lê e apaga o arquivo e grava o resultado
+    const plugin = (consoleCmds, real) => { const id = fs.readFileSync(CMD, 'utf8').match(/^id (\d+)/)[1]; fs.rmSync(CMD); write([{ t: 'cmd', id, ok: true, console: consoleCmds, real }]); };
+    fs.writeFileSync(logFile, fakeLog([[0, 10, 'Carreira']]));
+    fs.writeFileSync(cfg, 'uset g_console "0"\nuset g_developer "1"\n');
+    assert.equal(consoleState(logFile), 'off'); assert.equal(consoleState(null), 'unknown');
+    fs.writeFileSync(cfg, 'uset g_console "1"\nuset g_developer "1"\n');
+    const r = createRunner({ dir, url, key: 'sb_publishable_teste', gameLogPath: logFile, now: () => Date.parse(at(20, 12, 0)), notify: n => notes.push(n) });
+    await r.login('a@teste.com', 'senha-forte-1');
+    write([{ t: 'start', game: 'ats', plugin: '0.3.0', real: at(20, 0, 6) }, { t: 'time', gameTime: 870, real: at(20, 1, 0) }]);
+    await r.cycle();
+    assert.ok(!fs.existsSync(CMD), 'simulação desligada por padrão: nada é digitado no jogo');
+    const uid = m.db.users.get('a@teste.com').id;
+    m.db.status.get(uid).sim = { warpOn: true, warp: 0.9, loadOn: true, loadMinutes: 60 };   // ligado no app
+    await r.cycle();
+    assert.match(fs.readFileSync(CMD, 'utf8'), /^id \d+\nwarp 0\.9\n$/);
+    // entrega com o arquivo ainda não lido: o avanço espera
+    write(delivery(at(20, 10, 0), 'Elko', 1000, 900)); await r.cycle();
+    assert.doesNotMatch(fs.readFileSync(CMD, 'utf8'), /avancar/);
+    plugin(['warp 0.9'], at(20, 10, 30)); await r.cycle();
+    assert.match(fs.readFileSync(CMD, 'utf8'), /^id \d+\navancar 60\n$/, 'tempo de carga, sem repetir o warp');
+    assert.ok(notes.some(n => n.type === 'sim' && n.cmd.text === 'warp 0.9'));
+    assert.equal(m.db.status.get(uid).sim_last.text, 'warp 0.9', 'o app vê o último comando aplicado');
+    // pedidos do overlay se juntam enquanto o plugin não lê
+    assert.equal(r.advanceTime(240).ok, true); assert.equal(r.advanceTime(60).ok, true);
+    plugin(['g_set_time 15 30'], at(20, 11, 0)); await r.cycle();
+    assert.match(fs.readFileSync(CMD, 'utf8'), /avancar 300/);
+    assert.equal(r.setTime(25, 0).ok, false);
+    assert.equal(r.snapshot().simInfo.console, 'ok');
+    // console desligado: recusa com o motivo
+    fs.writeFileSync(cfg, 'uset g_console "0"\n');
+    assert.match(r.advanceTime(60).error, /console/);
+    fs.writeFileSync(cfg, 'uset g_console "1"\nuset g_developer "1"\n');
+    // entrega antiga relida (programa reaberto) não avança o tempo de novo; jogo fechado apaga o pedido pendente
+    write([{ t: 'stop', real: at(20, 11, 30) }]); await r.cycle();
+    assert.ok(!fs.existsSync(CMD)); assert.match(r.advanceTime(60).error, /jogo fechado/);
+    // perfil não ligado: nenhum comando
+    write([{ t: 'start', game: 'ats', plugin: '0.3.0', real: at(20, 11, 40) }]);
+    fs.writeFileSync(logFile, fakeLog([[0, 10, 'Carreira'], [11, 39, 'Teste']]));
+    write([{ t: 'time', gameTime: 5000, real: at(20, 11, 50) }]); await r.cycle();
+    assert.ok(!fs.existsSync(CMD), 'outro perfil: o warp não é aplicado');
+    fs.writeFileSync(logFile, fakeLog([[0, 10, 'Carreira'], [11, 39, 'Teste'], [11, 55, 'Carreira']]));
+    write([{ t: 'time', gameTime: 6000, real: at(20, 11, 56) }]); await r.cycle();
+    assert.match(fs.readFileSync(CMD, 'utf8'), /warp 0\.9/, 'de volta ao perfil ligado: warp aplicado');
+  } finally { await m.close(); fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('plugin: digita no console só com o caminhão parado, quebra avanços longos e recusa valores inválidos', { skip: !gpp && 'g++ não instalado' }, () => {
+  const dir = tmp(), exe = path.join(dir, 'jogo');
+  try {
+    execFileSync('g++', ['-std=c++17', '-I', path.join(__dirname, 'telemetry', 'sdk-shim'), '-o', exe, path.join(__dirname, 'telemetry', 'harness.cpp'), path.join(ROOT, 'telemetry', 'plugin', 'carreira_telemetria.cpp')]);
+    execFileSync(exe, [path.join(__dirname, 'telemetry', 'sessao-comandos.txt')], { env: { ...process.env, CARREIRA_TELEMETRIA_DIR: dir }, stdio: 'pipe' });
+    assert.deepEqual(fs.readFileSync(path.join(dir, 'teclado.txt'), 'utf8').trim().split('\n'),
+      ['<console>', 'warp 0.9', 'g_set_time 15 30', '<console>', '<console>', 'g_set_time 2 30', 'g_set_time 14 30', 'g_set_time 16 30', 'g_set_time 6 30', '<console>']);
+    const cmds = fs.readFileSync(path.join(dir, 'telemetria.jsonl'), 'utf8').trim().split('\n').map(l => JSON.parse(l)).filter(l => l.t === 'cmd');
+    assert.deepEqual(cmds.map(c => [c.id, c.ok]), [['7', true], ['8', false], ['9', true]]);
+    assert.match(cmds[1].error, /warp/);
+    assert.ok(!fs.existsSync(path.join(dir, 'comando.txt')), 'o plugin apaga o pedido depois de ler');
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test('instalador: acha o ATS pela biblioteca da Steam, instala na pasta plugins e aponta cópia em pasta errada', async () => {
   const ins = await import(path.join(ROOT, 'telemetry', 'companion', 'install.mjs'));
   const files = new Map([

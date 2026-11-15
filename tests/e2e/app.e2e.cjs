@@ -266,6 +266,14 @@ test('telemetria no app: luzes, pausar coleta, ligar perfil e aviso no cartão d
   await page.click('[data-act="tel-profile"][data-name="Teste"]');
   await page.waitForFunction(() => cloud.game.linked_profile === 'Teste');
   assert.equal(mock.db.status.get(uid).linked_profile, 'Teste');
+  // simulação no jogo: warp e tempo de carga vão para a conta (o PC aplica no jogo)
+  await page.click('[data-act="sim-set"][data-key="warpOn"]');
+  await page.waitForFunction(() => cloud.game.sim && cloud.game.sim.warpOn === true);
+  assert.deepEqual(mock.db.status.get(uid).sim, { warpOn: true, warp: 0.9, loadOn: false, loadMinutes: 60 });
+  await page.fill('#simLoad', '1.5'); await page.click('[data-act="sim-set"][data-key="loadOn"]');
+  await page.waitForFunction(() => cloud.game.sim.loadOn === true);
+  assert.equal(mock.db.status.get(uid).sim.loadMinutes, 90);
+  await shot(page, 'telemetria-simulacao');
   assert.ok(await overflow(page) <= 0);
   assert.deepEqual(page.errors, []);
   await ctx.close();
@@ -273,8 +281,21 @@ test('telemetria no app: luzes, pausar coleta, ligar perfil e aviso no cartão d
 
 test('overlay: modo compacto com botão de esconder quando aberto pelo app de PC', { skip }, async () => {
   const { ctx, page } = await device({ width: 440, height: 800 });
-  await ctx.addInitScript(() => { window.__hidden = 0; window.carreiraDesktop = { isDesktop: true, overlay: true, hideOverlay: () => { window.__hidden++; } }; });
+  await ctx.addInitScript(() => {
+    window.__hidden = 0; window.__adv = []; window.__set = [];
+    window.carreiraDesktop = { isDesktop: true, overlay: true, hideOverlay: () => { window.__hidden++; },
+      gameClock: async () => ({ online: true, gameTime: 870, sim: { block: null, why: null, pending: 0, last: null } }),
+      advanceTime: async m => { window.__adv.push(m); return { ok: true }; }, setTime: async (h, m) => { window.__set.push([h, m]); return { ok: false, error: 'Não dá agora: jogo fechado.' }; } };
+  });
   await page.goto(site.url + '?overlay=1'); await page.waitForFunction(() => typeof store !== 'undefined');
+  await createCareer(page);
+  // relógio do jogo e avanço rápido do tempo
+  await page.waitForFunction(() => (document.getElementById('ovClockNow') || {}).textContent === 'Dia 1 · 14:30');
+  await page.click('[data-act="ov-adv"][data-min="240"]');
+  assert.deepEqual(await page.evaluate(() => window.__adv), [240]);
+  await page.fill('#ovH', '07:15'); await page.click('[data-act="ov-set"]');
+  assert.deepEqual(await page.evaluate(() => window.__set), [[7, 15]]);
+  await page.waitForSelector('text=jogo fechado');
   assert.equal(await page.evaluate(() => document.documentElement.classList.contains('overlay')), true);
   await shot(page, 'overlay');
   await page.click('.ov-close');

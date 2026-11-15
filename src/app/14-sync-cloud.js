@@ -287,8 +287,13 @@ async function refreshDrafts() {
   catch (e) { if (e.code === 'setup') { cloud.draftsOff = true; cloud.drafts = []; } else return; }
   // situação atual do jogo (gravada pelo programa companheiro da telemetria)
   if (!cloud.gameOff && cloud.session && store.backend === cloudBackend) {
-    try { const r = await cloudRest('game_status?select=game,online,game_time,job,truck,updated_at,collect,linked_profile,profile,blocked,pc_seen_at,plugin,game_version,last_delivery&' + meQ()); cloud.game = r && r[0] ? r[0] : null; }
-    catch (e) { if (e.code === 'setup') { cloud.gameOff = true; cloud.game = null; } }
+    const cols = 'game,online,game_time,job,truck,updated_at,collect,linked_profile,profile,blocked,pc_seen_at,plugin,game_version,last_delivery';
+    try { const r = await cloudRest(`game_status?select=${cols}${cloud.noSimCols ? '' : ',sim,sim_last'}&` + meQ()); cloud.game = r && r[0] ? r[0] : null; }
+    catch (e) {
+      if (e.code === 'setup') { cloud.gameOff = true; cloud.game = null; }
+      // servidor sem as colunas da simulação (schema.sql antigo): o resto continua funcionando
+      else if (!cloud.noSimCols && /sim/.test(e.message || '')) { cloud.noSimCols = true; try { const r = await cloudRest(`game_status?select=${cols}&` + meQ()); cloud.game = r && r[0] ? r[0] : null; } catch (x) {} }
+    }
   }
   if (typeof onGameStatus === 'function') onGameStatus();
   if (cloud.drafts.map(d => d.id).join() + '|' + JSON.stringify(cloud.game) !== before && typeof onDraftsChange === 'function') onDraftsChange();

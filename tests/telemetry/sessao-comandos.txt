@@ -1,0 +1,31 @@
+# Comandos de simulação: o app pede warp e avançar o tempo; o plugin espera o caminhão parar e digita no console.
+init 1.01
+time 870
+pause 0
+speed 20
+file comando.txt id+7|warp+0.9|avancar+60
+frame 0
+frame 1600
+# andando: nada acontece
+speed 0
+frame 300
+frame 1600
+frame 0
+frame 400
+frame 300
+frame 300
+# arquivo com valor inválido vira registro de erro
+file comando.txt id+8|warp+99
+frame 300
+frame 1600
+# avançar 26 h (passos de 12 h) e ir para 6:30
+file comando.txt id+9|avancar+1560|hora+6+30
+frame 300
+frame 1600
+frame 400
+frame 300
+frame 300
+frame 300
+frame 300
+pause 1
+shutdown

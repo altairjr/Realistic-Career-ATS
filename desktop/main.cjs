@@ -3,7 +3,8 @@
 //  - envia ao app as entregas, o dia e o trabalho em andamento (mesmo núcleo do programa de terminal)
 //  - coleta pausável e só do perfil do jogo ligado à carreira
 //  - ícone na bandeja com o status, avisos a cada entrega
-//  - overlay: o app por cima do jogo com um atalho (padrão Ctrl+Shift+Espaço)
+//  - overlay: o app por cima do jogo com um atalho (padrão Ctrl+Shift+Espaço); ao esconder, o jogo volta a receber o teclado
+//  - simulação: warp e avanços de tempo digitados no console do jogo pelo plugin (runner.mjs → comando.txt)
 const { app, BrowserWindow, Tray, Menu, nativeImage, globalShortcut, ipcMain, Notification, shell, dialog, screen } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -12,7 +13,7 @@ const { pathToFileURL } = require('node:url');
 const APP_URL = 'https://altairjr.github.io/Realistic-Career-ATS/';
 const DIR = path.join(process.env.LOCALAPPDATA || app.getPath('userData'), 'CarreiraRealistaATS');
 const SETTINGS_FILE = path.join(DIR, 'desktop.json');
-const DEFAULTS = { openWithGame: true, startWithWindows: false, hotkey: 'Control+Shift+Space', game: 'ats', overlayBounds: null, overlayOpacity: 0.97, askedInstall: false };
+const DEFAULTS = { openWithGame: true, startWithWindows: false, hotkey: 'Control+Shift+Space', game: 'ats', overlayBounds: null, overlaySize: 2, overlayOpacity: 0.97, askedInstall: false };
 const LIB = app.isPackaged ? path.join(__dirname, 'lib') : path.join(__dirname, '..', 'telemetry', 'companion');
 const BUNDLED_DLL = app.isPackaged ? path.join(process.resourcesPath, 'carreira-telemetria.dll') : path.join(__dirname, 'resources', 'carreira-telemetria.dll');
 
@@ -24,7 +25,14 @@ if (!app.requestSingleInstanceLock()) app.quit();
 app.on('second-instance', () => showPainel());
 app.setAppUserModelId('io.github.altairjr.carreirarealista');
 
-function loadSettings() { try { return Object.assign({}, DEFAULTS, JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'))); } catch (e) { return Object.assign({}, DEFAULTS); } }
+function loadSettings() {
+  let s; try { s = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')); } catch (e) { s = {}; }
+  // v0.21: overlay um pouco maior; quem já tinha um tamanho salvo ganha o mesmo aumento uma vez
+  if (s.overlayBounds && !s.overlaySize) s.overlayBounds = Object.assign({}, s.overlayBounds, { width: Math.round(s.overlayBounds.width * 1.15), height: Math.round(s.overlayBounds.height * 1.1) });
+  const out = Object.assign({}, DEFAULTS, s, { overlaySize: 2 });
+  if (!s.overlaySize && Object.keys(s).length) { try { fs.writeFileSync(SETTINGS_FILE, JSON.stringify(out, null, 2)); } catch (e) {} }
+  return out;
+}
 function saveSettings() { fs.mkdirSync(DIR, { recursive: true }); fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2)); applySettings(); }
 function serverConfig() {
   try { return JSON.parse(fs.readFileSync(path.join(LIB, 'config.json'), 'utf8')); } catch (e) {}
@@ -103,24 +111,32 @@ function showPainel() {
   painel.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
 }
 function createOverlay() {
-  const area = screen.getPrimaryDisplay().workArea, b = settings.overlayBounds || { width: 440, height: Math.min(820, area.height - 40) };
+  const area = screen.getPrimaryDisplay().workArea, b = settings.overlayBounds || { width: 510, height: Math.min(900, area.height - 40) };
+  b.width = Math.min(b.width, area.width - 20); b.height = Math.min(b.height, area.height - 20);
   overlay = new BrowserWindow({
     x: b.x ?? area.x + area.width - b.width - 20, y: b.y ?? area.y + 20, width: b.width, height: b.height,
-    frame: false, transparent: true, alwaysOnTop: true, skipTaskbar: true, show: false, resizable: true, minWidth: 340, minHeight: 420,
+    frame: false, transparent: true, alwaysOnTop: true, skipTaskbar: true, show: false, resizable: true, minWidth: 380, minHeight: 460,
     webPreferences: prefs({ partition: 'persist:carreira' }, 'preload-overlay.cjs')
   });
   overlay.setAlwaysOnTop(true, 'screen-saver');   // acima de janelas em tela cheia sem borda
   overlay.setOpacity(settings.overlayOpacity);
   overlay.loadURL(APP_URL + '?overlay=1');
   overlay.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
-  const keep = () => { settings.overlayBounds = overlay.getBounds(); saveSettings(); };
+  const keep = () => { if (overlay.isMinimized() || !overlay.isVisible()) return; settings.overlayBounds = overlay.getBounds(); saveSettings(); };
   overlay.on('moved', keep); overlay.on('resized', keep);
-  overlay.on('close', e => { if (!quitting) { e.preventDefault(); overlay.hide(); } });
+  overlay.on('close', e => { if (!quitting) { e.preventDefault(); hideOverlay(); } });
+}
+// Esconder devolve o teclado ao jogo: minimizar faz o Windows ativar a janela de baixo (o jogo) antes de esconder.
+// Só esconder deixaria o foco perdido e seria preciso clicar no jogo.
+function hideOverlay() {
+  if (!overlay || overlay.isDestroyed() || !overlay.isVisible()) return;
+  overlay.blur(); overlay.minimize(); overlay.hide();
 }
 function toggleOverlay() {
   if (!overlay || overlay.isDestroyed()) createOverlay();
-  if (overlay.isVisible() && overlay.isFocused()) overlay.hide();
-  else { overlay.showInactive(); overlay.focus(); }
+  if (overlay.isVisible() && !overlay.isMinimized() && overlay.isFocused()) return hideOverlay();
+  if (overlay.isMinimized()) overlay.restore();
+  overlay.show(); overlay.focus();
 }
 
 /* --- comandos das janelas --- */
@@ -139,7 +155,11 @@ function handlers() {
   ipcMain.handle('open-app', () => shell.openExternal(APP_URL));
   ipcMain.handle('open-folder', () => shell.openPath(DIR));
   ipcMain.handle('toggle-overlay', () => toggleOverlay());
-  ipcMain.handle('hide-overlay', () => { if (overlay) overlay.hide(); });
+  ipcMain.handle('hide-overlay', () => hideOverlay());
+  // tempo no jogo (overlay): o pedido vai para o plugin, que digita no console quando você volta ao jogo com o caminhão parado
+  ipcMain.handle('game-clock', () => { const s = runner.snapshot(); return { online: s.game.online, gameTime: s.game.gameTime, sim: s.simInfo, settings: s.control.sim }; });
+  ipcMain.handle('advance-time', (e, minutes) => { const r = runner.advanceTime(minutes); if (r.ok) pushLog(`Pedido: avançar ${Math.round(minutes / 60 * 10) / 10} h no jogo.`); refreshUi(); return r; });
+  ipcMain.handle('set-time', (e, h, m) => { const r = runner.setTime(h, m); if (r.ok) pushLog(`Pedido: hora do jogo ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}.`); refreshUi(); return r; });
 }
 
 function onNotify(n) {
@@ -148,6 +168,7 @@ function onNotify(n) {
     const d = n.draft.data;
     new Notification({ title: 'Entrega enviada para o app', body: `${d.origin || '?'} → ${d.dest || '?'} · ${d.miles} mi · $${Number(d.freight).toLocaleString('pt-BR')}. Revise em "Viagens do jogo".`, icon: path.join(__dirname, 'icons', 'app.png') }).show();
   }
+  if (n.type === 'sim') new Notification({ title: n.cmd.ok ? 'Aplicado no jogo' : 'Comando não aplicado no jogo', body: n.cmd.ok ? n.cmd.text : n.cmd.error || 'erro', silent: true }).show();
   if (n.type === 'profile-linked') new Notification({ title: 'Perfil ligado à carreira', body: `"${n.profile}" envia para o app. Outros perfis do jogo não enviam nada.` }).show();
 }
 

@@ -1,5 +1,6 @@
 // Imita o jogo para testar o plugin fora do Windows: carrega o plugin, chama os callbacks como o jogo faria
 // e segue um roteiro em texto (uma ação por linha). Espaços nos valores são escritos como '+'.
+//   frame <ms> (espera e chama o fim do quadro) | file <nome> <texto> (grava na pasta do plugin; '+' = espaço, '|' = nova linha)
 //   time <minutos> | speed <m/s> | odo <km> | pause 0|1 | job <atributos> | nojob | truck <atributos> | event <id> <atributos> | init <versao> | shutdown
 //   atributo: tipo:nome=valor   (tipos: s, u32, u64, s32, s64, f, b)
 #include <cstdio>
@@ -10,6 +11,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <thread>
+#include <chrono>
 #include "scssdk_telemetry.h"
 
 static std::map<scs_event_t, scs_telemetry_event_callback_t> events;
@@ -63,6 +66,9 @@ int main(int argc, char **argv) {
 			scs_telemetry_configuration_t c{ cmd == "truck" ? "truck" : "job", a.list.data() }; auto cb = events[SCS_TELEMETRY_EVENT_configuration]; if (cb) cb(SCS_TELEMETRY_EVENT_configuration, &c, nullptr); }
 		else if (cmd == "event") { std::string id; in >> id; Attrs a; parse_attrs(in, a);
 			scs_telemetry_gameplay_event_t g{ id.c_str(), a.list.data() }; auto cb = events[SCS_TELEMETRY_EVENT_gameplay]; if (cb) cb(SCS_TELEMETRY_EVENT_gameplay, &g, nullptr); }
+		else if (cmd == "frame") { int ms = 0; in >> ms; if (ms > 0) std::this_thread::sleep_for(std::chrono::milliseconds(ms)); auto cb = events[SCS_TELEMETRY_EVENT_frame_end]; if (cb) cb(SCS_TELEMETRY_EVENT_frame_end, nullptr, nullptr); }
+		else if (cmd == "file") { std::string name, text; in >> name >> text; for (auto &ch : text) { if (ch == '+') ch = ' '; else if (ch == '|') ch = '\n'; }
+			const char *d = std::getenv("CARREIRA_TELEMETRIA_DIR"); std::ofstream o(std::string(d ? d : ".") + "/" + name, std::ios::binary); o << text; }
 		else if (cmd == "shutdown") scs_telemetry_shutdown();
 	}
 	return 0;

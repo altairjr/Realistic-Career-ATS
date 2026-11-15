@@ -128,6 +128,7 @@ function telemetryBlock() {
     <div class="full"><label class="inline-opt"><input type="checkbox" data-act="tel-collect" ${collect ? 'checked' : ''}> Coleta ligada</label></div>
     <div class="full">${L.row}${L.box}<div style="font-size:14px">Ligado: <b>${esc(g.linked_profile || 'nenhum (todos os perfis enviam)')}</b>${g.profile ? ` · no jogo agora: <b>${esc(g.profile)}</b>` : ''}</div></div>
     <div class="full row">${g.profile && g.profile !== g.linked_profile ? `<button class="btn sm" data-act="tel-profile" data-name="${esc(g.profile)}">Ligar "${esc(g.profile)}"</button>` : ''}${g.linked_profile ? '<button class="btn sm ghost" data-act="tel-profile" data-name="">Aceitar todos os perfis</button>' : ''}</div>
+    ${simBlock(g)}
     <div class="full row"><a class="btn sm primary" href="${DESKTOP_URL}" target="_blank" rel="noopener">Baixar o Carreira Realista para PC</a></div>
     ${hint('O programa do PC instala o plugin no jogo, envia as entregas e mostra o app por cima do jogo (Ctrl+Shift+Espaço). Guia em docs/telemetria.md.')}`;
 }
@@ -136,7 +137,67 @@ function telemetrySummary() {
   const g = cloud.game || {};
   return [pcOnline(g) ? 'PC conectado' : 'PC desligado', g.collect === false ? 'coleta pausada' : g.blocked === 'profile' ? 'perfil não ligado' : 'coleta ligada', g.linked_profile ? `perfil ${g.linked_profile}` : ''].filter(Boolean).join(' · ');
 }
+/* Simulação no jogo: warp ao abrir o jogo e tempo de carga depois de cada entrega (o programa do PC digita no console) */
+const SIM_DEFAULT = { warpOn: false, warp: 0.9, loadOn: false, loadMinutes: 60 };
+const simOf = g => Object.assign({}, SIM_DEFAULT, (g && g.sim) || {});
+function simBlock(g) {
+  if (cloud.noSimCols) return `<div class="full">${hint('Simulação no jogo (warp e tempo de carga): rode de novo o supabase/schema.sql no Supabase para liberar.')}</div>`;
+  const s = simOf(g), L = labRow('tel.sim', 'Simulação no jogo'), last = g.sim_last;
+  return `<div class="full">${L.row}${L.box}</div>
+    <div class="full"><label class="inline-opt"><input type="checkbox" data-act="sim-set" data-key="warpOn" ${s.warpOn ? 'checked' : ''}> Aplicar o warp ao abrir o jogo</label></div>
+    <div class="field"><label for="simWarp">Warp (1 = normal)</label><input id="simWarp" type="number" inputmode="decimal" step="0.05" min="0.1" max="2" value="${s.warp}"></div>
+    <div class="full"><label class="inline-opt"><input type="checkbox" data-act="sim-set" data-key="loadOn" ${s.loadOn ? 'checked' : ''}> Avançar o relógio do jogo depois de cada entrega (carga e descarga)</label></div>
+    <div class="field"><label for="simLoad">Tempo de carga (horas)</label><input id="simLoad" type="number" inputmode="decimal" step="0.25" min="0" max="12" value="${Math.round(s.loadMinutes / 15) / 4}"></div>
+    <div class="full row"><button class="btn sm" data-act="sim-save">Salvar valores</button>${last ? `<span class="muted" style="font-size:12.5px">${last.ok ? 'Último aplicado no jogo' : 'Último com erro'}: ${esc(last.text || '')} · ${agoTxt(last.at)}</span>` : ''}</div>`;
+}
+async function saveSim(patch) {
+  const s = Object.assign(simOf(cloud.game), patch);
+  s.warp = Math.min(2, Math.max(0.1, Math.round(E.n(s.warp) * 100) / 100 || 0.9));
+  s.loadMinutes = Math.min(720, Math.max(0, Math.round(E.n(s.loadMinutes))));
+  await setGameControl({ sim: s });
+  return s;
+}
+
+/* Overlay (app de PC por cima do jogo): relógio do jogo e botões para avançar o tempo */
+const hhmm = t => `${String(Math.floor(t / 60) % 24).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+function overlayClock() {
+  const D = window.carreiraDesktop;
+  if (!D || !D.gameClock || !document.documentElement.classList.contains('overlay')) return '';
+  return `<section class="panel pad ov-clock" id="ovClock">
+    <div class="sec-head"><div><div class="eyebrow">Tempo no jogo</div><h2 class="hrow" style="font-size:18px" id="ovClockNow">…</h2></div></div>
+    <div class="row">${[1, 2, 4, 8].map(h => `<button class="btn sm" data-act="ov-adv" data-min="${h * 60}">+${h} h</button>`).join('')}</div>
+    <div class="row" style="flex-wrap:nowrap;align-items:end"><div class="field" style="flex:1"><label for="ovH">Ir para</label><input id="ovH" type="time" step="60" value="06:00"></div><button class="btn sm primary" data-act="ov-set">Ir</button></div>
+    <div class="muted" style="font-size:12px" id="ovClockMsg">O comando é digitado no console quando você volta ao jogo com o caminhão parado.</div>
+  </section>`;
+}
+async function overlayClockTick() {
+  const el = document.getElementById('ovClockNow'); if (!el || !window.carreiraDesktop) return;
+  try {
+    const c = await window.carreiraDesktop.gameClock(), msg = document.getElementById('ovClockMsg');
+    el.textContent = c.online && typeof c.gameTime === 'number' ? `Dia ${Math.floor(c.gameTime / 1440) + 1} · ${hhmm(c.gameTime)}` : 'Jogo fechado';
+    if (msg && c.sim) msg.textContent = c.sim.why ? `Parado: ${c.sim.why}.` : c.sim.pending ? 'Pedido na fila: volte ao jogo e pare o caminhão.' : c.sim.last ? `${c.sim.last.ok ? 'Aplicado' : 'Erro'}: ${c.sim.last.text}` : 'O comando é digitado no console quando você volta ao jogo com o caminhão parado.';
+  } catch (e) {}
+}
+if (window.carreiraDesktop && window.carreiraDesktop.gameClock) setInterval(overlayClockTick, 2000);
+
 async function telemetryControlAction(a, el) {
+  if (a === 'ov-adv' || a === 'ov-set') {
+    const D = window.carreiraDesktop; if (!D) return true;
+    let r;
+    if (a === 'ov-adv') r = await D.advanceTime(+el.dataset.min);
+    else { const v = (document.getElementById('ovH').value || '').split(':'); r = await D.setTime(+v[0], +v[1]); }
+    toast(r && r.ok ? (a === 'ov-adv' ? `Avançar ${+el.dataset.min / 60} h: na fila` : 'Hora na fila') + ' — volte ao jogo' : (r && r.error) || 'Não deu certo.');
+    overlayClockTick(); return true;
+  }
+  if (a === 'sim-set' || a === 'sim-save') {
+    try {
+      const patch = a === 'sim-set' ? { [el.dataset.key]: el.checked } : {};
+      patch.warp = E.n(document.getElementById('simWarp').value); patch.loadMinutes = E.n(document.getElementById('simLoad').value) * 60;
+      const s = await saveSim(patch);
+      toast(a === 'sim-save' ? 'Simulação salva' : el.dataset.key === 'warpOn' ? (s.warpOn ? `Warp ${String(s.warp).replace('.', ',')} será aplicado no jogo` : 'O warp volta ao normal no jogo') : (s.loadOn ? `O relógio avança ${String(s.loadMinutes / 60).replace('.', ',')} h depois de cada entrega` : 'Tempo de carga desligado'));
+    } catch (e) { if (el.type === 'checkbox') el.checked = !el.checked; toast('Sem conexão: tente de novo.'); }
+    render(); return true;
+  }
   if (a === 'tel-collect') {
     try { await setGameControl({ collect: el.checked }); toast(el.checked ? 'Coleta ligada' : 'Coleta pausada: o PC para de enviar em alguns segundos'); }
     catch (e) { el.checked = !el.checked; toast('Sem conexão: tente de novo.'); }

@@ -57,6 +57,9 @@ alter table public.game_status add column if not exists pc_seen_at     timestamp
 alter table public.game_status add column if not exists plugin         text;
 alter table public.game_status add column if not exists game_version   text;
 alter table public.game_status add column if not exists last_delivery  jsonb;
+-- v0.21: simulação no jogo (warp, tempo de carga) ajustada no app e o último comando aplicado pelo PC
+alter table public.game_status add column if not exists sim            jsonb;
+alter table public.game_status add column if not exists sim_last       jsonb;
 
 -- Limites de tamanho: impedem que alguém use o banco para guardar arquivos grandes.
 alter table public.careers      drop constraint if exists careers_tamanho;
@@ -66,7 +69,8 @@ alter table public.career_weeks add  constraint career_weeks_tamanho check (pg_c
 alter table public.game_status  drop constraint if exists game_status_regras;
 alter table public.game_status  add  constraint game_status_regras check (pg_column_size(job) < 5000 and game in ('ats', 'ets2') and (truck is null or length(truck) <= 120)
   and coalesce(length(linked_profile), 0) <= 120 and coalesce(length(profile), 0) <= 120 and (blocked is null or blocked in ('paused', 'profile'))
-  and coalesce(length(plugin), 0) <= 20 and coalesce(length(game_version), 0) <= 40 and coalesce(pg_column_size(last_delivery), 0) < 2000);
+  and coalesce(length(plugin), 0) <= 20 and coalesce(length(game_version), 0) <= 40 and coalesce(pg_column_size(last_delivery), 0) < 2000
+  and coalesce(pg_column_size(sim), 0) < 1000 and coalesce(pg_column_size(sim_last), 0) < 1000);
 alter table public.trip_drafts  drop constraint if exists trip_drafts_regras;
 alter table public.trip_drafts  add  constraint trip_drafts_regras check (
   pg_column_size(data) < 20000 and length(event_id) <= 128 and length(source) <= 40 and game in ('ats', 'ets2')
