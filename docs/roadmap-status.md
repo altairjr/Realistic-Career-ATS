@@ -1,4 +1,4 @@
-# Roadmap — onde estamos (v0.20, nov/2026)
+# Roadmap — onde estamos (v0.21, nov/2026)
 
 | Fase | Objetivo | Status |
 |---|---|---|
@@ -82,12 +82,18 @@
 - **Testes**: sessão de jogo simulada compilada com o plugin → companheiro → servidor de teste; 40 testes automáticos e 6 no navegador.
 - Guia de instalação e limites em `telemetria.md`.
 
-### App de PC, controle da coleta e overlay (v0.20, esta versão)
+### App de PC, controle da coleta e overlay (v0.20)
 - **App de PC "Carreira Realista"** (Electron): instalador `CarreiraRealista-Setup.exe` publicado em Release com link fixo; instala e confere o plugin pela Steam; ícone na bandeja com status (verde/amarelo/vermelho); painel com cada item e o botão para resolver; avisos a cada entrega; abrir junto com o jogo e iniciar com o Windows.
 - **Coleta controlável**: pausar (o plugin para de gravar) e **perfil do jogo ligado à carreira** (lido no `game.log.txt`); outros perfis não enviam nada. Controle no PC e no app (*Ajustes › Telemetria do jogo*).
 - **Overlay (fase 4)**: o app por cima do jogo com Ctrl+Shift+Espaço, modo compacto, arrastável.
 - **Plugin 0.2**: arquivo de pausa e abertura do programa com o jogo.
 - **Testes**: 44 automáticos (perfil, pausa, controle pela conta, instalador) e 11 no navegador (painel do PC, telemetria no app, overlay).
+
+### Simulação no jogo e ajustes do overlay (v0.21, esta versão)
+- **Instalador testado no Windows** (workflow `desktop` corrigido: testes no Linux, pasta da DLL criada).
+- **Overlay**: ao esconder, o foco volta ao jogo; janela cerca de 15% maior.
+- **Simulação no jogo**: warp automático ao abrir o jogo (ex.: 0,9), tempo de carga depois de cada entrega (padrão 1 h) e, no overlay, avançar o tempo (+1/2/4/8 h) ou ir para uma hora. O plugin 0.3 digita no console com o jogo em foco e o caminhão parado.
+- **Testes**: 46 automáticos (plugin digitando no console, fila e junção de pedidos, console desligado, perfil) e 11 no navegador.
 
 ### Fase 5 — parte já feita
 - 5 classificações com predefinições; fixo, hora, CPM e percentual; jornada FMCSA; empréstimo; renome; bônus de segurança; experiência e CPM sugerido; status migratório; custos de owner-operator.
@@ -100,7 +106,7 @@
 - 10h de folga entre turnos e restart de 34h exatos usando o relógio do jogo.
 
 ### Fase 4 — Overlay (restante)
-- Testar no Windows: atalho, janela por cima do jogo em tela cheia sem borda, login dentro do overlay.
+- ~~Testar no Windows~~: instalador, bandeja e overlay funcionando (14/11). Falta confirmar a simulação no jogo (warp e tempo).
 - Ajustes finos de tamanho, transparência e posição conforme o uso.
 - Atualização automática do app de PC (hoje: baixar a versão nova no mesmo link).
 
@@ -115,9 +121,7 @@
 - **ETS2**: o nome do projeto já prevê o Euro Truck Simulator 2. Exige outro conjunto de regras (euro, tacógrafo da UE, impostos europeus), aproveitando o mesmo motor e a mesma telemetria.
 
 ## Próxima etapa de implementação
-**Primeiro teste do app de PC no Windows:**
-1. Salvar o workflow `desktop.yml`, rodar (*Actions › desktop › Run workflow*) e baixar `CarreiraRealista-Setup.exe` pela Release.
-2. Instalar, deixar o programa instalar o plugin, entrar na conta e jogar uma entrega com pedágio e abastecimento.
-3. Conferir bandeja, avisos, pausa, perfil ligado e o overlay (Ctrl+Shift+Espaço) com o jogo em tela cheia sem borda.
-
-Depois: **Fase 5 — carreira avançada** (folga em casa, progressão, caminhão próprio, documentos do motorista, eventos).
+**Testar a simulação no jogo (v0.21):**
+1. Rodar de novo o `supabase/schema.sql` (colunas `sim` e `sim_last`) e o workflow `desktop`; instalar a versão nova e aceitar a atualização do plugin (0.3) com o jogo fechado.
+2. Ligar warp e tempo de carga em *Ajustes › Telemetria do jogo*, abrir o jogo e conferir o warp; fazer uma entrega e conferir o relógio; usar +1 h no overlay.
+3. Depois: eventos de multa, pedágio e abastecimento num jogo real; atualização automática do app de PC.

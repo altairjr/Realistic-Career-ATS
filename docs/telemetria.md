@@ -1,4 +1,4 @@
-# Telemetria do jogo — v0.20
+# Telemetria do jogo — v0.21
 
 A telemetria lê o jogo enquanto você joga e leva para o app:
 - **o dia atual do jogo**, que o app pode seguir sozinho;
@@ -39,6 +39,18 @@ Depois disso é só jogar: com a opção **Abrir este programa junto com o jogo*
 - Atalho **Ctrl+Shift+Espaço** (pode trocar no painel): abre o app numa janela sempre por cima do jogo, em modo compacto, para lançar e revisar viagens sem Alt+Tab. O × ou o mesmo atalho escondem.
 - Arraste pelo cabeçalho verde; o tamanho e a posição ficam guardados. Na primeira vez, entre na conta dentro da janela.
 - Funciona com o jogo **em janela ou em tela cheia sem borda**. Em tela cheia exclusiva, o Windows não deixa outra janela ficar por cima.
+
+- Ao esconder (× ou atalho), o jogo volta a receber o teclado sem precisar clicar nele (v0.21: a janela minimiza antes de sumir, e o Windows devolve o foco ao jogo).
+
+### Simulação no jogo (v0.21)
+Ajuste em *Ajustes › Telemetria do jogo › Simulação no jogo*; o programa do PC aplica no jogo digitando no console por você.
+- **Warp ao abrir o jogo** (padrão 0,9 quando ligado): aplicado uma vez em cada sessão do jogo, no perfil ligado. Desligar volta ao `warp 1`.
+- **Tempo de carga** (padrão 1 h quando ligado): depois de cada entrega, o relógio do jogo avança esse tempo (`g_set_time`).
+- **Overlay › Tempo no jogo**: relógio do jogo e botões +1 h, +2 h, +4 h, +8 h e "Ir para" uma hora. `g_set_time` só anda para frente; uma hora menor que a atual é a do dia seguinte.
+- **Quando o comando é digitado**: o pedido fica na fila (`comando.txt`) até o jogo estar em foco, sem pausa, com o caminhão parado há 1,5 s. O plugin abre o console, digita, aperta Enter e fecha. O resultado aparece num aviso do Windows, no painel do PC e no app ("Último aplicado no jogo").
+- **Precisa do console ligado**: em `Documentos\American Truck Simulator\config.cfg`, com o jogo fechado, `uset g_console "1"` e `uset g_developer "1"`. Sem isso o programa não manda nada (as letras virariam comandos de direção).
+- A tecla do console usada é a que fica abaixo do Esc (\` no teclado americano, ' no ABNT2).
+- Nada é aplicado com a coleta pausada, em perfil não ligado ou com o jogo fechado.
 
 ### Sem o app de PC (alternativa)
 A DLL também é publicada na Release e no workflow `telemetria`; copie para `bin\win_x64\plugins` (exatamente `plugins`, minúsculo, com "s"; uma pasta `Plugin` criada por outros mods é ignorada). Depois rode `npm run telemetria` na pasta do projeto (Node.js 18+). Opções: `-- --diagnostico`, `-- --pausar`, `-- --retomar`, `-- --sair`.

@@ -53,7 +53,7 @@ Usado quando o app roda fora do Claude com uma conta conectada. O formato do est
 |---|---|---|---|
 | `careers` | `user_id` | `state` (jsonb), `rev`, `client`, `updated_at` | O estado inteiro; `rev` = `_rev` do estado |
 | `career_weeks` | `user_id` + `week_id` | `start_day`, `data` (jsonb), `updated_at` | Uma semana arquivada por linha |
-| `game_status` (v0.19; controle v0.20) | `user_id` | `game`, `online`, `game_time`, `job` (jsonb), `truck`, `updated_at`; controle: `collect`, `linked_profile`, `profile`, `blocked`, `pc_seen_at`, `plugin`, `game_version`, `last_delivery` | Situação do jogo e controle da telemetria (o app escreve `collect` e `linked_profile`; o PC, o resto) |
+| `game_status` (v0.19; controle v0.20; simulação v0.21) | `user_id` | `game`, `online`, `game_time`, `job` (jsonb), `truck`, `updated_at`; controle: `collect`, `linked_profile`, `profile`, `blocked`, `pc_seen_at`, `plugin`, `game_version`, `last_delivery`; simulação: `sim` (jsonb `{warpOn, warp, loadOn, loadMinutes}`), `sim_last` (jsonb `{at, ok, text}`) | Situação do jogo e controle da telemetria (o app escreve `collect`, `linked_profile` e `sim`; o PC, o resto) |
 | `trip_drafts` (v0.18) | `id`; único por `user_id` + `event_id` | `source`, `game`, `data` (jsonb), `status`, `trip_id`, `created_at`, `resolved_at` | Viagens vindas do jogo, à espera de revisão (formato em `telemetria.md`) |
 
 - Acesso por usuário (Row Level Security): `auth.uid() = user_id`. Definição em `supabase/schema.sql`.

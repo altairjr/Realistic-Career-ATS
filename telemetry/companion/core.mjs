@@ -5,6 +5,7 @@
 //   { type: 'draft',  draft }   entrega concluída → rascunho de viagem (tabela trip_drafts)
 //   { type: 'status', status }  situação atual do jogo → tabela game_status (dia, trabalho em andamento)
 //   { type: 'log',    text }    mensagem para a tela do programa
+//   { type: 'cmd',    cmd }     resultado de um comando de simulação digitado no console (warp, avançar o tempo)
 
 export const KM_TO_MI = 0.621371;
 const r1 = v => Math.round(v * 10) / 10;
@@ -44,7 +45,7 @@ export function apply(state, rec) {
 
   switch (rec.t) {
     case 'start':
-      state.online = true; state.plugin = rec.plugin || null; state.game = rec.game === 'eut2' ? 'ets2' : 'ats'; state.gameVersion = (String(rec.gameName || '').match(/\d+\.\d+[\w.]*/) || [rec.gameVersion || ''])[0];
+      state.online = true; state.session = rec.real || String(Date.now()); state.plugin = rec.plugin || null; state.game = rec.game === 'eut2' ? 'ets2' : 'ats'; state.gameVersion = (String(rec.gameName || '').match(/\d+\.\d+[\w.]*/) || [rec.gameVersion || ''])[0];
       out.push({ type: 'log', text: `Jogo aberto (${rec.gameName || state.game}, plugin ${rec.plugin || '?'}).${rec.gameplayEvents === false ? ' Atenção: esta versão do jogo não envia eventos de entrega.' : ''}` });
       status(); break;
     case 'stop':
@@ -66,6 +67,12 @@ export function apply(state, rec) {
         out.push({ type: 'log', text: j ? `Trabalho: ${j.cargo || 'carga'} de ${j.origin} para ${j.dest}${j.plannedMiles ? `, ${j.plannedMiles} mi` : ''}${j.income ? `, ${money(j.income)}` : ''}.` : 'Sem trabalho no momento.' });
         status();
       }
+      break;
+    }
+    case 'cmd': {
+      const list = Array.isArray(rec.console) ? rec.console.map(String) : [];
+      out.push({ type: 'cmd', cmd: { id: String(rec.id ?? ''), ok: !!rec.ok, console: list, error: rec.error || null, text: describeCommands(list), at: rec.real || null } });
+      out.push({ type: 'log', text: rec.ok ? `No jogo: ${describeCommands(list)}.` : `Comando no jogo não aplicado: ${rec.error || 'erro'}.` });
       break;
     }
     case 'event': {
@@ -96,6 +103,20 @@ export function apply(state, rec) {
     }
   }
   return out;
+}
+
+// "warp 0.9", "g_set_time 15 30" → texto para avisos
+export function describeCommands(list) {
+  const parts = [];
+  for (const c of list) {
+    const w = c.match(/^warp ([\d.]+)/), t = c.match(/^g_set_time (\d+) (\d+)/);
+    if (w) parts.push(`warp ${w[1]}`);
+    else if (t) parts.push(`hora ${String(t[1]).padStart(2, '0')}:${String(t[2]).padStart(2, '0')}`);
+    else parts.push(c);
+  }
+  // vários passos de tempo seguidos: só a hora final importa
+  const merged = parts.filter((p, i) => !(p.startsWith('hora ') && parts[i + 1] && parts[i + 1].startsWith('hora ')));
+  return merged.join(', ').replace(/^hora /, 'hora do jogo ').replace(/, hora /, ', hora do jogo ');
 }
 
 export function buildDraft(state, rec) {
