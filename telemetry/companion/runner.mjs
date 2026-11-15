@@ -43,7 +43,7 @@ export function createRunner(opts) {
   const load = (f, d) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch (e) { return d; } };
 
   const saved = load(STATE, {});
-  const S = { offset: saved.offset || 0, core: Object.assign(createState(), saved.core || {}), queue: saved.queue || [], status: saved.status || null, lastDelivery: saved.lastDelivery || null };
+  const S = { offset: saved.offset || 0, core: Object.assign(createState(), saved.core || {}), queue: saved.queue || [], status: saved.status || null, lastDelivery: saved.lastDelivery || null, times: saved.times || {} };
   // controle: coleta ligada e perfil ligado à carreira. Vem da conta; a cópia local vale sem internet.
   const control = Object.assign({ collect: true, linkedProfile: null, sim: null }, load(CONTROL, {}));
   let session = load(SESSION, null);
@@ -54,7 +54,7 @@ export function createRunner(opts) {
   let simQueue = [], simSeq = Math.floor(now() / 1000) % 1e6, warpDone = null;
   const sim = () => cleanSim(control.sim);
 
-  const persist = () => writeFileSync(STATE, JSON.stringify({ offset: S.offset, core: S.core, queue: S.queue, status: S.status, lastDelivery: S.lastDelivery }));
+  const persist = () => writeFileSync(STATE, JSON.stringify({ offset: S.offset, core: S.core, queue: S.queue, status: S.status, lastDelivery: S.lastDelivery, times: S.times }));
   const saveControl = () => writeFileSync(CONTROL, JSON.stringify(control));
   // a pausa também desliga o plugin: ele confere este arquivo antes de gravar
   const syncPauseFlag = () => { const f = join(dir, PAUSE_FLAG); if (control.collect) rmSync(f, { force: true }); else if (!existsSync(f)) writeFileSync(f, 'Coleta pausada pelo Carreira Realista. Apague este arquivo para voltar a coletar.\n'); };
@@ -114,6 +114,9 @@ export function createRunner(opts) {
       let rec; try { rec = JSON.parse(line); } catch (e) { continue; }
       if (diag) diag(line);
       const why = blockedReason(rec);
+      // última hora do jogo de cada perfil: base para avançar o tempo quando o jogo está pausado e não informa a hora
+      const prof = rec.real ? profileAt(gameLog, rec.real) : null;
+      if (prof && typeof rec.gameTime === 'number') S.times[prof] = rec.gameTime;
       for (const o of apply(S.core, rec)) {
         if (o.type === 'log') log(o.text);
         if (o.type === 'draft') {
@@ -165,7 +168,8 @@ export function createRunner(opts) {
     if (!simQueue.length || existsSync(CMD)) return;
     let warp = null, hour = null, advance = 0;
     for (const c of simQueue) { if (c.warp != null) warp = c.warp; if (c.hour) { hour = c.hour; advance = 0; } if (c.advance) advance += c.advance; }
-    const lines = [`id ${++simSeq}`];
+    const lines = [`id ${++simSeq}`], prof = currentProfile(gameLog), base = prof && typeof S.times[prof] === 'number' ? S.times[prof] : S.core.gameTime;
+    if (typeof base === 'number') lines.push(`base ${base}`);
     if (warp != null) lines.push(`warp ${warp}`);
     if (hour) lines.push(`hora ${hour[0]} ${hour[1]}`);
     if (advance) lines.push(`avancar ${Math.min(2880, advance)}`);

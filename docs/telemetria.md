@@ -49,6 +49,7 @@ Ajuste em *Ajustes › Telemetria do jogo › Simulação no jogo*; o programa d
 - **Overlay › Tempo no jogo**: relógio do jogo e botões +1 h, +2 h, +4 h, +8 h e "Ir para" uma hora. `g_set_time` só anda para frente; uma hora menor que a atual é a do dia seguinte.
 - **Quando o comando é digitado**: o pedido fica na fila (`comando.txt`) até o jogo estar em foco com um perfil carregado, há 1,5 s no menu do Esc (pausado), sem caminhão ou com o caminhão parado (dirigindo, espera parar). O plugin abre o console, digita, aperta Enter e fecha. O resultado aparece num aviso do Windows, no painel do PC e no app ("Último aplicado no jogo").
 - **Precisa do console ligado**: em `Documentos\American Truck Simulator\config.cfg`, com o jogo fechado, `uset g_console "1"` e `uset g_developer "1"`. Sem isso o programa não manda nada (as letras virariam comandos de direção).
+- **No menu do Esc o jogo não informa a hora** (o SDK para de enviar dados quando o jogo pausa). Para avançar o tempo ali, o programa do PC manda a última hora conhecida daquele perfil (a do fim da última sessão, que é a do save automático) e o plugin calcula a partir dela. Depois de aplicar, a hora nova vale até o jogo informar a real (v0.21.1).
 - A tecla do console usada é a que fica abaixo do Esc (\` no teclado americano, ' no ABNT2).
 - Nada é aplicado com a coleta pausada, em perfil não ligado ou com o jogo fechado.
 

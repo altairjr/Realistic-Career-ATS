@@ -1,0 +1,11 @@
+# Menu do Esc logo depois de carregar o perfil: o jogo está pausado e não informa a hora.
+# O programa do PC manda a última hora conhecida (base); o plugin avança a partir dela e grava o novo dia.
+init 1.01
+file comando.txt id+1|base+1410|warp+0.9|avancar+60
+frame 300
+frame 3100
+frame 1600
+frame 400
+frame 300
+frame 300
+shutdown
