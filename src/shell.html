@@ -272,6 +272,12 @@ textarea{width:100%;min-height:140px;border:1px solid var(--line);background:var
   body > .wrap{order:2;width:100%}
   .fab{bottom:calc(24px + env(safe-area-inset-bottom,0px))}
 }
+/* App por cima do jogo (overlay do app de PC): fundo levemente transparente, cabeçalho serve para arrastar a janela */
+html.overlay,html.overlay body{background:transparent}
+html.overlay body{background:color-mix(in srgb,var(--bg) 93%,transparent);border:1px solid var(--line);border-radius:12px;overflow-x:hidden}
+html.overlay header.sign{-webkit-app-region:drag;app-region:drag;border-radius:12px 12px 0 0}
+html.overlay header.sign button,html.overlay header.sign input{-webkit-app-region:no-drag;app-region:no-drag}
+.ov-close{position:fixed;top:6px;right:8px;z-index:70;width:28px;height:28px;border-radius:50%;border:0;background:rgba(0,0,0,.35);color:#fff;font-size:18px;line-height:28px;cursor:pointer;-webkit-app-region:no-drag;app-region:no-drag}
 </style>
 
 <header class="sign">

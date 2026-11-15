@@ -56,6 +56,7 @@ $('#view').addEventListener('click', async e => {
   if (await accountAction(a, el)) return;
   if (a === 'drafts') return draftsFlow();
   if (await telemetryAction(a)) return;
+  if (await telemetryControlAction(a, el)) return;
   if (a === 'new-trip') openTrip();
   if (a === 'new-contract') return newContractFlow(el.dataset.co);
   if (a === 'suggest-cpm') { const ex = EXPERIENCE.find(x => x[0] === S.profile.experience) || EXPERIENCE[0]; commit(st => { st.contracts.find(x => x.id === st.currentContractId).terms.contract.cpm.rate = E.r2((ex[2] + ex[3]) / 2); }); toast('CPM ajustado pela experiência'); }
@@ -107,6 +108,14 @@ if (window.ResizeObserver) new ResizeObserver(measureChrome).observe(document.qu
 
 /* ---------- Início ---------- */
 try { const t = sessionStorage.getItem('ats-tab'); if (t) tab = t; } catch (e) {}
+// Aberto pelo app de PC por cima do jogo: modo compacto e botão para esconder a janela (atalho volta a mostrar)
+if (/[?&]overlay=1/.test(location.search)) {
+  document.documentElement.classList.add('overlay');
+  if (window.carreiraDesktop && window.carreiraDesktop.hideOverlay) {
+    const b = document.createElement('button'); b.className = 'ov-close'; b.type = 'button'; b.textContent = '×'; b.title = 'Esconder (o atalho mostra de novo)';
+    b.onclick = () => window.carreiraDesktop.hideOverlay(); document.body.appendChild(b);
+  }
+}
 loadLocal();
 store.mode = window.claude && window.claude.use ? 'claude' : cloudCfg() ? 'cloud' : 'local';
 if (store.mode === 'cloud' && !cloud.session) store.status = 'out';

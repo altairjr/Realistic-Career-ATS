@@ -28,7 +28,7 @@ function jobSummary(state) {
     cargo: text(j, ['cargo', 'cargo.id']), origin: text(j, ['source.city', 'source.city.id']), dest: text(j, ['destination.city', 'destination.city.id']),
     originCompany: text(j, ['source.company']), destCompany: text(j, ['destination.company']),
     plannedMiles: km !== null ? r1(km * KM_TO_MI) : null, income: pick(j, ['income']), deadline: pick(j, ['delivery.time']),
-    special: !!j['special.job'], market: text(j, ['job.market'])
+    special: !!(j['is.special.job'] ?? j['special.job']), market: text(j, ['job.market'])
   };
 }
 export function statusOf(state) {
@@ -44,7 +44,7 @@ export function apply(state, rec) {
 
   switch (rec.t) {
     case 'start':
-      state.online = true; state.game = rec.game === 'eut2' ? 'ets2' : 'ats'; state.gameVersion = rec.gameVersion || '';
+      state.online = true; state.plugin = rec.plugin || null; state.game = rec.game === 'eut2' ? 'ets2' : 'ats'; state.gameVersion = (String(rec.gameName || '').match(/\d+\.\d+[\w.]*/) || [rec.gameVersion || ''])[0];
       out.push({ type: 'log', text: `Jogo aberto (${rec.gameName || state.game}, plugin ${rec.plugin || '?'}).${rec.gameplayEvents === false ? ' Atenção: esta versão do jogo não envia eventos de entrega.' : ''}` });
       status(); break;
     case 'stop':

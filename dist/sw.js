@@ -4,7 +4,7 @@
    - Fontes do Google: cópia guardada, atualizada em segundo plano.
    - Chamadas ao servidor de sincronização nunca passam por aqui.
    A marca de versão (no nome do cache abaixo) é trocada pelo build a cada versão, o que renova o cache. */
-const CACHE = 'carreira-ats-0.19.0-71421372';
+const CACHE = 'carreira-ats-0.20.0-f520fa89';
 const FONTS = 'carreira-ats-fontes';
 const SHELL = ['./', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 

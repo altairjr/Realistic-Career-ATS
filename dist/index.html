@@ -292,6 +292,12 @@ textarea{width:100%;min-height:140px;border:1px solid var(--line);background:var
   body > .wrap{order:2;width:100%}
   .fab{bottom:calc(24px + env(safe-area-inset-bottom,0px))}
 }
+/* App por cima do jogo (overlay do app de PC): fundo levemente transparente, cabeçalho serve para arrastar a janela */
+html.overlay,html.overlay body{background:transparent}
+html.overlay body{background:color-mix(in srgb,var(--bg) 93%,transparent);border:1px solid var(--line);border-radius:12px;overflow-x:hidden}
+html.overlay header.sign{-webkit-app-region:drag;app-region:drag;border-radius:12px 12px 0 0}
+html.overlay header.sign button,html.overlay header.sign input{-webkit-app-region:no-drag;app-region:no-drag}
+.ov-close{position:fixed;top:6px;right:8px;z-index:70;width:28px;height:28px;border-radius:50%;border:0;background:rgba(0,0,0,.35);color:#fff;font-size:18px;line-height:28px;cursor:pointer;-webkit-app-region:no-drag;app-region:no-drag}
 </style>
 
 <header class="sign">
@@ -326,7 +332,7 @@ textarea{width:100%;min-height:140px;border:1px solid var(--line);background:var
 <div id="toastRoot"></div>
 
 <script>
-const APP_VERSION = '0.19.0';
+const APP_VERSION = '0.20.0';
 /* Servidor de sincronização (Supabase). Opcional.
    Preencha com os dados do SEU projeto (Settings › API Keys) e rode o build.
    A chave publicável (sb_publishable_...) pode ficar no código: quem protege os dados
@@ -1153,7 +1159,7 @@ async function refreshDrafts() {
   catch (e) { if (e.code === 'setup') { cloud.draftsOff = true; cloud.drafts = []; } else return; }
   // situação atual do jogo (gravada pelo programa companheiro da telemetria)
   if (!cloud.gameOff && cloud.session && store.backend === cloudBackend) {
-    try { const r = await cloudRest('game_status?select=game,online,game_time,job,truck,updated_at&' + meQ()); cloud.game = r && r[0] ? r[0] : null; }
+    try { const r = await cloudRest('game_status?select=game,online,game_time,job,truck,updated_at,collect,linked_profile,profile,blocked,pc_seen_at,plugin,game_version,last_delivery&' + meQ()); cloud.game = r && r[0] ? r[0] : null; }
     catch (e) { if (e.code === 'setup') { cloud.gameOff = true; cloud.game = null; } }
   }
   if (typeof onGameStatus === 'function') onGameStatus();
@@ -1163,6 +1169,12 @@ async function resolveDraft(id, status, tripId) {
   const q = draftQ(); q[id] = { status, tripId: tripId || null }; lsSet(DRAFTQ_LS, q);
   cloud.drafts = cloud.drafts.filter(d => d.id !== id);
   try { await cloudDrafts(); } catch (e) {}   // sem conexão: fica na fila e vai na próxima verificação
+}
+
+// Controle da telemetria feito no app (coleta, perfil ligado): só estas colunas mudam; o programa do PC obedece na próxima volta
+async function setGameControl(patch) {
+  await cloudRest('game_status?on_conflict=user_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: Object.assign({ user_id: cloud.session.user.id }, patch) });
+  cloud.game = Object.assign({}, cloud.game || {}, patch);
 }
 
 /* ---------- Estado: carreira, empresas e contratos ---------- */
@@ -1905,6 +1917,7 @@ const HELP = {
   'data.account': Hx('Sua conta no servidor de sincronização. A carreira fica guardada nela e aparece em todo aparelho onde você entrar.', 'Para usar o mesmo saldo, viagens e holerites no celular e no PC. Sem conta, o app funciona igual, mas os dados ficam só neste navegador.', 'Crie a conta uma vez com e-mail e senha e use "Entrar" nos outros aparelhos. O app confere a conta a cada 15 segundos e sempre que volta para a tela. Sem internet ele continua funcionando e envia tudo quando a conexão voltar. Se dois aparelhos mudarem a carreira ao mesmo tempo, vale a mudança mais recente: evite lançar viagens nos dois enquanto um deles estiver sem internet.'),
   'data.install': Hx('Instalar coloca o app na tela inicial do celular ou no menu do PC, em janela própria, como um aplicativo comum.', 'Abre mais rápido e funciona sem internet. As atualizações chegam sozinhas quando houver conexão.', 'Use o botão "Instalar app" quando ele aparecer ou o menu do navegador. Instalar não muda seus dados: eles continuam neste navegador e na conta.'),
   'ui.jogo': Hx('O que o programa companheiro da telemetria leu do jogo: o dia no calendário do jogo, o caminhão e o trabalho que você está fazendo (carga, origem, destino, distância planejada, frete e prazo).', 'Para acompanhar o jogo pelo celular e para o dia do app andar junto com o dia do jogo.', '"Ligar o dia do app ao jogo" guarda a diferença entre os dois calendários. Depois disso, quando o jogo vira o dia, o app vira junto, com as contas fixas e os pagamentos do calendário do app. O app nunca volta dias. "Desligar" devolve o controle do dia só para você. Para funcionar, o plugin precisa estar instalado no jogo e o programa companheiro aberto no PC (docs/telemetria.md).'),
+  'tel.perfil': Hx('O perfil do jogo (ATS) cujas entregas entram nesta carreira.', 'Para jogar em outro perfil sem misturar viagens, dia e trabalho com esta carreira.', 'O primeiro perfil em que você joga com o programa do PC aberto fica ligado sozinho. Para trocar, abra o jogo no outro perfil e toque em "Ligar". "Aceitar todos os perfis" desliga o filtro. Se quiser parar de coletar de vez, desmarque "Coleta ligada": o plugin para de gravar.'),
   'ui.rascunhos': Hx('Entregas que o leitor de telemetria (programa no PC, junto com o jogo) registrou e enviou para a sua conta.', 'Nada entra na carreira sozinho. "Lançar" abre o formulário de viagem já preenchido com origem, destino, distância, frete e despesas lidas do jogo; você confere o dia, as refeições e o status da entrega e salva. "Descartar" tira a entrega da lista.', 'Se o mesmo rascunho aparecer em dois aparelhos, lance em um só: depois de lançado, ele some dos outros na próxima sincronização.'),
   /* --- Abas --- */
   'tab.painel': Hx('O resumo da semana em aberto.', 'Mostra o que vai receber, o resultado da semana até agora e o botão para fechar a semana.', 'Lance as viagens pelo botão "+ Viagem" e feche a semana quando o calendário passar de domingo.'),
@@ -2162,6 +2175,7 @@ function ajustes() {
     `Dia 1 = ${E.WEEKDAYS_FULL[s.day1Weekday].toLowerCase()} · ${s.cities.length} cidades`)}
   ${mod('Tipos de operação', 'Opções de "Especificação da operação" nos contratos.', null,
     listEditor('operation', 'Especificação da operação', 'Ex.: Dedicated Regional'), s.lists.operation.join(' · '))}
+  ${mod('Telemetria do jogo', 'Programa do PC, plugin, coleta e perfil do jogo ligado à carreira.', null, telemetryBlock(), telemetrySummary())}
   ${mod('Dados e sincronização', 'Conta, instalação do app, planilha e backup.', null,
     `${accountBlock()}${installBlock()}
      ${(L => `<div class="full">${L.row}${L.box}</div>`)(labRow('data.sheet', 'Planilha (.xlsx)'))}
@@ -2525,10 +2539,10 @@ function draftsFlow() {
   if (!list.length) { closeModal(); toast('Nenhuma viagem do jogo para revisar.'); return; }
   const row = d => { const x = d.data || {};
     return `<div class="li" style="align-items:center"><div style="min-width:0"><div><b>${esc(draftTitle(d))}</b></div>
-      <div class="muted" style="font-size:12.5px">${fmtN(E.n(x.miles))} mi · frete ${fmt(E.n(x.freight))}${x.vehicle === 'car' ? ' · carro' : ''}${x.cargo ? ' · ' + esc(x.cargo) : ''}${x.gameDay ? ` · dia ${appDayOf(x.gameDay) || '?'} no app (${x.gameDay} no jogo)` : ''}${x.cargoDamagePct ? ` · carga ${fmtN(x.cargoDamagePct)}% danificada` : ''}${E.n(x.tolls) || E.n(x.fines) ? ` · pedágios ${fmt(x.tolls)}, multas ${fmt(x.fines)}` : ''} · recebida ${esc(draftWhen(d))}</div></div>
+      <div class="muted" style="font-size:12.5px">${fmtN(E.n(x.miles))} mi · frete ${fmt(E.n(x.freight))}${x.vehicle === 'car' ? ' · carro' : ''}${x.cargo ? ' · ' + esc(x.cargo) : ''}${x.gameDay ? (appDayOf(x.gameDay) ? ` · dia ${appDayOf(x.gameDay)} no app (${x.gameDay} no jogo)` : ` · dia ${x.gameDay} no jogo`) : ''}${x.cargoDamagePct ? ` · carga ${fmtN(x.cargoDamagePct)}% danificada` : ''}${E.n(x.tolls) || E.n(x.fines) ? ` · pedágios ${fmt(x.tolls)}, multas ${fmt(x.fines)}` : ''} · recebida ${esc(draftWhen(d))}</div></div>
       <div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-ddel="${esc(d.id)}">Descartar</button><button class="btn sm primary" data-duse="${esc(d.id)}">Lançar</button></div></div>`; };
   openModal(`<div class="row between"><h2>Viagens do jogo</h2><button class="btn ghost sm" data-x>Fechar</button></div>
-    <p class="muted" style="margin:0;font-size:13.5px">"Lançar" abre o formulário já preenchido: confira o dia, as refeições e o status da entrega antes de salvar.</p>
+    <p class="muted" style="margin:0;font-size:13.5px">"Lançar" abre o formulário já preenchido: confira o dia, as refeições e o status da entrega antes de salvar.${telOffset() === null && list.some(d => d.data && d.data.gameDay) ? ' O dia do app ainda não está ligado ao jogo: o dia que você confirmar na primeira entrega faz essa ligação.' : ''}</p>
     <div class="list">${list.map(row).join('')}</div>`, sh => {
     sh.querySelector('[data-x]').onclick = closeModal;
     sh.addEventListener('click', async e => {
@@ -2585,7 +2599,7 @@ function gameCard() {
   const dayLine = gd ? `Dia ${gd} no jogo${linked ? ` = dia ${appDayOf(gd)} no app` : ''}` : 'Dia do jogo ainda desconhecido';
   return `<section class="panel pad" style="display:flex;flex-direction:column;gap:6px">
     <div class="sec-head"><div><div class="eyebrow">${g.online ? 'No jogo agora' : 'Última sessão no jogo'}${g.truck ? ' · ' + esc(g.truck) : ''}</div><h2 class="hrow" style="font-size:18px">${dayLine}${h.btn}</h2></div></div>
-    ${h.box}${job}
+    ${h.box}${g.collect === false ? '<div class="banner" style="margin:0;padding:8px 10px">Coleta pausada: nada do jogo é enviado.</div>' : g.blocked === 'profile' ? `<div class="banner" style="margin:0;padding:8px 10px">Jogando no perfil "${esc(g.profile)}", que não está ligado à carreira: nada é enviado.</div>` : ''}${job}
     <div class="row">${linked ? `<span class="muted" style="font-size:12.5px">O dia do app acompanha o jogo.</span><button class="btn sm ghost" data-act="tel-unlink">Desligar</button>`
       : gd ? `<button class="btn sm" data-act="tel-link">Ligar o dia do app ao jogo</button>` : ''}</div>
   </section>`;
@@ -2598,6 +2612,49 @@ async function telemetryAction(a) {
     commit(st => { st.settings.telemetry = { offset: st.gameDay - gd }; }); toast('Dia do app ligado ao jogo'); return true;
   }
   if (a === 'tel-unlink') { commit(st => { st.settings.telemetry = { offset: null }; }); toast('O dia do app volta a ser controlado só por você'); return true; }
+  return false;
+}
+
+/* ---------- Ajustes › Telemetria do jogo: o que está funcionando, coleta e perfil ligado ---------- */
+const DESKTOP_URL = 'https://github.com/altairjr/Realistic-Career-ATS/releases/latest/download/CarreiraRealista-Setup.exe';
+const agoTxt = iso => { if (!iso) return ''; const s = Math.round((Date.now() - Date.parse(iso)) / 1000); return s < 90 ? 'agora há pouco' : s < 3600 ? `há ${Math.round(s / 60)} min` : s < 86400 ? `há ${Math.round(s / 3600)} h` : `há ${Math.round(s / 86400)} dia(s)`; };
+const pcOnline = g => !!(g && g.pc_seen_at && Date.now() - Date.parse(g.pc_seen_at) < 3 * 60e3);
+const light = (lv, t, d) => `<div class="full" style="display:flex;gap:8px;align-items:flex-start"><span class="dot ${lv}" style="margin-top:6px;flex:none"></span><div><b style="font-weight:600">${t}</b>${d ? `<div class="muted" style="font-size:12.5px">${d}</div>` : ''}</div></div>`;
+
+function telemetryBlock() {
+  if (store.mode !== 'cloud' || !cloud.session) return hint('Entre na sua conta (Dados e sincronização) para usar a telemetria do jogo.');
+  if (cloud.gameOff) return hint('O servidor ainda não tem as tabelas da telemetria. Rode de novo o supabase/schema.sql no Supabase.');
+  const g = cloud.game || {}, collect = g.collect !== false;
+  const lights = [
+    pcOnline(g) ? light('on', 'Programa do PC conectado', `visto ${agoTxt(g.pc_seen_at)}`) : light('', 'Programa do PC desligado', g.pc_seen_at ? `visto pela última vez ${agoTxt(g.pc_seen_at)}` : 'Instale o Carreira Realista no PC (botão abaixo).'),
+    g.online && pcOnline(g) ? light('on', 'Jogo aberto', `${esc(g.game_version || '')}${g.plugin ? ` · plugin ${esc(g.plugin)}` : ''}`) : light('', 'Jogo fechado', g.plugin ? `plugin ${esc(g.plugin)}` : ''),
+    !collect ? light('wait', 'Coleta pausada', 'O plugin não grava e nada é enviado.') : g.blocked === 'profile' ? light('wait', `Perfil "${esc(g.profile)}" não ligado à carreira`, 'Nada deste perfil vai para o app.') : light('on', 'Coleta ligada', ''),
+    g.last_delivery ? light('on', `Última entrega: ${esc(g.last_delivery.title)}`, `${fmtN(E.n(g.last_delivery.miles))} mi · ${fmt(g.last_delivery.freight)} · ${agoTxt(g.last_delivery.at)}`) : ''
+  ].join('');
+  const L = labRow('tel.perfil', 'Perfil do jogo ligado à carreira');
+  return `${lights}
+    <div class="full"><label class="inline-opt"><input type="checkbox" data-act="tel-collect" ${collect ? 'checked' : ''}> Coleta ligada</label></div>
+    <div class="full">${L.row}${L.box}<div style="font-size:14px">Ligado: <b>${esc(g.linked_profile || 'nenhum (todos os perfis enviam)')}</b>${g.profile ? ` · no jogo agora: <b>${esc(g.profile)}</b>` : ''}</div></div>
+    <div class="full row">${g.profile && g.profile !== g.linked_profile ? `<button class="btn sm" data-act="tel-profile" data-name="${esc(g.profile)}">Ligar "${esc(g.profile)}"</button>` : ''}${g.linked_profile ? '<button class="btn sm ghost" data-act="tel-profile" data-name="">Aceitar todos os perfis</button>' : ''}</div>
+    <div class="full row"><a class="btn sm primary" href="${DESKTOP_URL}" target="_blank" rel="noopener">Baixar o Carreira Realista para PC</a></div>
+    ${hint('O programa do PC instala o plugin no jogo, envia as entregas e mostra o app por cima do jogo (Ctrl+Shift+Espaço). Guia em docs/telemetria.md.')}`;
+}
+function telemetrySummary() {
+  if (store.mode !== 'cloud' || !cloud.session) return 'Entre na conta para usar';
+  const g = cloud.game || {};
+  return [pcOnline(g) ? 'PC conectado' : 'PC desligado', g.collect === false ? 'coleta pausada' : g.blocked === 'profile' ? 'perfil não ligado' : 'coleta ligada', g.linked_profile ? `perfil ${g.linked_profile}` : ''].filter(Boolean).join(' · ');
+}
+async function telemetryControlAction(a, el) {
+  if (a === 'tel-collect') {
+    try { await setGameControl({ collect: el.checked }); toast(el.checked ? 'Coleta ligada' : 'Coleta pausada: o PC para de enviar em alguns segundos'); }
+    catch (e) { el.checked = !el.checked; toast('Sem conexão: tente de novo.'); }
+    render(); return true;
+  }
+  if (a === 'tel-profile') {
+    try { await setGameControl({ linked_profile: el.dataset.name || null }); toast(el.dataset.name ? `Perfil "${el.dataset.name}" ligado à carreira` : 'Todos os perfis enviam'); }
+    catch (e) { toast('Sem conexão: tente de novo.'); }
+    render(); return true;
+  }
   return false;
 }
 
@@ -3994,6 +4051,7 @@ $('#view').addEventListener('click', async e => {
   if (await accountAction(a, el)) return;
   if (a === 'drafts') return draftsFlow();
   if (await telemetryAction(a)) return;
+  if (await telemetryControlAction(a, el)) return;
   if (a === 'new-trip') openTrip();
   if (a === 'new-contract') return newContractFlow(el.dataset.co);
   if (a === 'suggest-cpm') { const ex = EXPERIENCE.find(x => x[0] === S.profile.experience) || EXPERIENCE[0]; commit(st => { st.contracts.find(x => x.id === st.currentContractId).terms.contract.cpm.rate = E.r2((ex[2] + ex[3]) / 2); }); toast('CPM ajustado pela experiência'); }
@@ -4045,6 +4103,14 @@ if (window.ResizeObserver) new ResizeObserver(measureChrome).observe(document.qu
 
 /* ---------- Início ---------- */
 try { const t = sessionStorage.getItem('ats-tab'); if (t) tab = t; } catch (e) {}
+// Aberto pelo app de PC por cima do jogo: modo compacto e botão para esconder a janela (atalho volta a mostrar)
+if (/[?&]overlay=1/.test(location.search)) {
+  document.documentElement.classList.add('overlay');
+  if (window.carreiraDesktop && window.carreiraDesktop.hideOverlay) {
+    const b = document.createElement('button'); b.className = 'ov-close'; b.type = 'button'; b.textContent = '×'; b.title = 'Esconder (o atalho mostra de novo)';
+    b.onclick = () => window.carreiraDesktop.hideOverlay(); document.body.appendChild(b);
+  }
+}
 loadLocal();
 store.mode = window.claude && window.claude.use ? 'claude' : cloudCfg() ? 'cloud' : 'local';
 if (store.mode === 'cloud' && !cloud.session) store.status = 'out';

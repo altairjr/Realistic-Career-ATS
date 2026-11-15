@@ -75,7 +75,9 @@ function createMock(opt = {}) {
               const dup = [...db.drafts.values()].find(x => x.user_id === uid && x.event_id === r.event_id);
               if (dup) { if (/ignore-duplicates/.test(prefer)) continue; return send(409, { code: '23505', message: 'duplicate key value violates unique constraint' }); }
             }
-            db[table].set(keyOf(r), r);
+            // upsert do PostgREST: só as colunas enviadas mudam
+            const prev = table === 'status' ? db[table].get(keyOf(r)) : null;
+            db[table].set(keyOf(r), prev && /merge-duplicates/.test(prefer) ? Object.assign({}, prev, r) : r);
           }
           return send(201);
         }

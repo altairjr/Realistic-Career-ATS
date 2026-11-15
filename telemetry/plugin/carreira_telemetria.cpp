@@ -12,6 +12,10 @@
    (telemetry/companion), que lê este arquivo. Assim, mudanças do SDK não exigem recompilar o plugin.
 
    Arquivo: %LOCALAPPDATA%\CarreiraRealistaATS\telemetria.jsonl (ou a pasta em CARREIRA_TELEMETRIA_DIR).
+   Controle pela mesma pasta (escrito pelo programa do PC):
+     pausado.flag         existe = coleta pausada: o plugin não grava nada
+     abrir-com-jogo.txt   caminho do programa do PC: o plugin o abre quando o jogo inicia (se ainda não estiver aberto)
+     app.vivo             atualizado pelo programa do PC enquanto está aberto
    Instalação: copiar a DLL para <pasta do jogo>\bin\win_x64\plugins\ */
 #include <cstdio>
 #include <cstdlib>
@@ -19,10 +23,21 @@
 #include <ctime>
 #include <string>
 #include <filesystem>
+#include <chrono>
+
+#if defined(_WIN32)
+#  ifndef NOMINMAX
+#    define NOMINMAX
+#  endif
+#  define WIN32_LEAN_AND_MEAN
+#  include <windows.h>
+#  include <shellapi.h>
+#  pragma comment(lib, "shell32.lib")
+#endif
 
 #include "scssdk_telemetry.h"
 
-#define PLUGIN_VERSION "0.1.0"
+#define PLUGIN_VERSION "0.2.0"
 #define PLUGIN_TAG "[carreira-telemetria] "
 
 // Exporta as duas funções que o jogo procura, com o nome exato, seja qual for a ligação declarada no SDK.
@@ -35,6 +50,7 @@
 namespace {
 
 scs_log_t game_log = nullptr;
+std::string out_dir;
 std::string out_file;
 std::string game_id = "?";
 
@@ -120,8 +136,14 @@ std::string context_json() {
 	return o + ",\"real\":" + esc(now_iso().c_str());
 }
 
+bool paused_by_user() {
+	std::error_code ec;
+	return std::filesystem::exists(std::filesystem::u8path(out_dir + "/pausado.flag"), ec);
+}
+
 void write_line(const std::string &line) {
 	if (out_file.empty()) return;
+	if (paused_by_user()) return;   // coleta pausada no programa do PC ou no app: nada é gravado
 	std::error_code ec;
 	// arquivo grande demais: guarda a versão anterior e começa outro
 	if (std::filesystem::exists(out_file, ec) && std::filesystem::file_size(out_file, ec) > 5u * 1024u * 1024u) {
@@ -150,7 +172,10 @@ SCSAPI_VOID on_speed(const scs_string_t, const scs_u32_t, const scs_value_t *con
 	if (value && value->type == SCS_VALUE_TYPE_float) speed = value->value_float.value;
 }
 SCSAPI_VOID on_odometer(const scs_string_t, const scs_u32_t, const scs_value_t *const value, const scs_context_t) {
-	if (value && value->type == SCS_VALUE_TYPE_float) odometer = value->value_float.value;
+	if (!value || value->type != SCS_VALUE_TYPE_float) return;
+	odometer = value->value_float.value;
+	// trabalho carregado antes do primeiro valor do odômetro (jogo acabou de abrir): começa a contar daqui
+	if (job_active && job_odometer_start < 0) job_odometer_start = odometer;
 }
 
 /* --- Eventos --- */
@@ -163,7 +188,7 @@ SCSAPI_VOID on_configuration(const scs_event_t, const void *const event_info, co
 	if (!info || !info->id) return;
 	if (std::strcmp(info->id, "job") == 0) {
 		const bool has_job = info->attributes && info->attributes->name;
-		if (has_job && !job_active) { job_active = true; drive_minutes = 0.0; job_odometer_start = odometer; }
+		if (has_job && !job_active) { job_active = true; drive_minutes = 0.0; job_odometer_start = odometer; }   // odômetro -1 = ainda desconhecido
 		if (!has_job) job_active = false;
 		write_line("{\"t\":\"job\",\"attrs\":" + attrs_json(info->attributes) + ",\"jobOdometerStart\":" + (job_odometer_start >= 0 ? num(job_odometer_start) : std::string("null")) + context_json() + "}");
 	}
@@ -190,8 +215,31 @@ std::string output_path() {
 		base = std::string(local) + "/CarreiraRealistaATS";
 	}
 	std::error_code ec;
-	std::filesystem::create_directories(base, ec);
+	std::filesystem::create_directories(std::filesystem::u8path(base), ec);
+	out_dir = base;
 	return base + "/telemetria.jsonl";
+}
+
+// Abre o programa do PC junto com o jogo, se o usuário ativou essa opção e ele ainda não estiver aberto
+void launch_desktop_app() {
+#if defined(_WIN32)
+	namespace fs = std::filesystem;
+	std::error_code ec;
+	FILE *f = std::fopen((out_dir + "/abrir-com-jogo.txt").c_str(), "rb");
+	if (!f) return;
+	char buf[1024] = {0}; size_t n = std::fread(buf, 1, sizeof buf - 1, f); std::fclose(f);
+	std::string exe(buf, n);
+	while (!exe.empty() && (exe.back() == '\n' || exe.back() == '\r' || exe.back() == ' ')) exe.pop_back();
+	if (exe.empty() || !fs::exists(fs::u8path(exe), ec)) return;
+	const fs::path alive = fs::u8path(out_dir + "/app.vivo");
+	if (fs::exists(alive, ec)) {
+		const auto age = fs::file_time_type::clock::now() - fs::last_write_time(alive, ec);
+		if (!ec && age < std::chrono::seconds(20)) return;   // já está aberto
+	}
+	const std::wstring wexe = fs::u8path(exe).wstring();
+	const HINSTANCE r = ShellExecuteW(nullptr, L"open", wexe.c_str(), L"--pelo-jogo", nullptr, SW_SHOWMINNOACTIVE);
+	log_msg(reinterpret_cast<INT_PTR>(r) > 32 ? "programa do PC aberto junto com o jogo" : "não foi possível abrir o programa do PC");
+#endif
 }
 
 } // namespace
@@ -210,15 +258,16 @@ SCSAPI_RESULT scs_telemetry_init(const scs_u32_t version, const scs_telemetry_in
 		&& p->register_for_event(SCS_TELEMETRY_EVENT_configuration, on_configuration, nullptr) == SCS_RESULT_ok;
 	// eventos de jogo (entrega, multa, pedágio...) existem a partir da versão 1.01 da telemetria
 	const bool gameplay = version >= SCS_TELEMETRY_VERSION_1_01 && p->register_for_event(SCS_TELEMETRY_EVENT_gameplay, on_gameplay, nullptr) == SCS_RESULT_ok;
-	ok = ok && p->register_for_channel("game.time", SCS_U32_NIL, SCS_VALUE_TYPE_u32, SCS_TELEMETRY_CHANNEL_FLAG_none, on_game_time, nullptr) == SCS_RESULT_ok;
-	p->register_for_channel("truck.speed", SCS_U32_NIL, SCS_VALUE_TYPE_float, SCS_TELEMETRY_CHANNEL_FLAG_none, on_speed, nullptr);
-	p->register_for_channel("truck.odometer", SCS_U32_NIL, SCS_VALUE_TYPE_float, SCS_TELEMETRY_CHANNEL_FLAG_none, on_odometer, nullptr);
+	ok = ok && p->register_for_channel("game.time", SCS_U32_NIL, SCS_VALUE_TYPE_u32, SCS_TELEMETRY_CHANNEL_FLAG_each_frame, on_game_time, nullptr) == SCS_RESULT_ok;
+	p->register_for_channel("truck.speed", SCS_U32_NIL, SCS_VALUE_TYPE_float, SCS_TELEMETRY_CHANNEL_FLAG_each_frame, on_speed, nullptr);
+	p->register_for_channel("truck.odometer", SCS_U32_NIL, SCS_VALUE_TYPE_float, SCS_TELEMETRY_CHANNEL_FLAG_each_frame, on_odometer, nullptr);
 	if (!ok) { log_msg("não foi possível registrar os eventos"); return SCS_RESULT_generic_error; }
 
 	char ver[32]; std::snprintf(ver, sizeof ver, "%u.%u", SCS_GET_MAJOR_VERSION(p->common.game_version), SCS_GET_MINOR_VERSION(p->common.game_version));
 	write_line(std::string("{\"t\":\"start\",\"plugin\":\"" PLUGIN_VERSION "\",\"game\":") + esc(game_id.c_str()) + ",\"gameName\":" + esc(p->common.game_name) +
-		",\"gameVersion\":\"" + ver + "\",\"gameplayEvents\":" + (gameplay ? "true" : "false") + ",\"real\":" + esc(now_iso().c_str()) + "}");
-	log_msg((std::string("ativo, gravando em ") + out_file).c_str());
+		",\"telemetryGameVersion\":\"" + ver + "\",\"gameplayEvents\":" + (gameplay ? "true" : "false") + ",\"real\":" + esc(now_iso().c_str()) + "}");
+	log_msg((std::string("ativo, gravando em ") + out_file + (paused_by_user() ? " (coleta pausada)" : "")).c_str());
+	launch_desktop_app();
 	return SCS_RESULT_ok;
 }
 

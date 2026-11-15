@@ -31,10 +31,10 @@ function draftsFlow() {
   if (!list.length) { closeModal(); toast('Nenhuma viagem do jogo para revisar.'); return; }
   const row = d => { const x = d.data || {};
     return `<div class="li" style="align-items:center"><div style="min-width:0"><div><b>${esc(draftTitle(d))}</b></div>
-      <div class="muted" style="font-size:12.5px">${fmtN(E.n(x.miles))} mi · frete ${fmt(E.n(x.freight))}${x.vehicle === 'car' ? ' · carro' : ''}${x.cargo ? ' · ' + esc(x.cargo) : ''}${x.gameDay ? ` · dia ${appDayOf(x.gameDay) || '?'} no app (${x.gameDay} no jogo)` : ''}${x.cargoDamagePct ? ` · carga ${fmtN(x.cargoDamagePct)}% danificada` : ''}${E.n(x.tolls) || E.n(x.fines) ? ` · pedágios ${fmt(x.tolls)}, multas ${fmt(x.fines)}` : ''} · recebida ${esc(draftWhen(d))}</div></div>
+      <div class="muted" style="font-size:12.5px">${fmtN(E.n(x.miles))} mi · frete ${fmt(E.n(x.freight))}${x.vehicle === 'car' ? ' · carro' : ''}${x.cargo ? ' · ' + esc(x.cargo) : ''}${x.gameDay ? (appDayOf(x.gameDay) ? ` · dia ${appDayOf(x.gameDay)} no app (${x.gameDay} no jogo)` : ` · dia ${x.gameDay} no jogo`) : ''}${x.cargoDamagePct ? ` · carga ${fmtN(x.cargoDamagePct)}% danificada` : ''}${E.n(x.tolls) || E.n(x.fines) ? ` · pedágios ${fmt(x.tolls)}, multas ${fmt(x.fines)}` : ''} · recebida ${esc(draftWhen(d))}</div></div>
       <div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-ddel="${esc(d.id)}">Descartar</button><button class="btn sm primary" data-duse="${esc(d.id)}">Lançar</button></div></div>`; };
   openModal(`<div class="row between"><h2>Viagens do jogo</h2><button class="btn ghost sm" data-x>Fechar</button></div>
-    <p class="muted" style="margin:0;font-size:13.5px">"Lançar" abre o formulário já preenchido: confira o dia, as refeições e o status da entrega antes de salvar.</p>
+    <p class="muted" style="margin:0;font-size:13.5px">"Lançar" abre o formulário já preenchido: confira o dia, as refeições e o status da entrega antes de salvar.${telOffset() === null && list.some(d => d.data && d.data.gameDay) ? ' O dia do app ainda não está ligado ao jogo: o dia que você confirmar na primeira entrega faz essa ligação.' : ''}</p>
     <div class="list">${list.map(row).join('')}</div>`, sh => {
     sh.querySelector('[data-x]').onclick = closeModal;
     sh.addEventListener('click', async e => {
@@ -91,7 +91,7 @@ function gameCard() {
   const dayLine = gd ? `Dia ${gd} no jogo${linked ? ` = dia ${appDayOf(gd)} no app` : ''}` : 'Dia do jogo ainda desconhecido';
   return `<section class="panel pad" style="display:flex;flex-direction:column;gap:6px">
     <div class="sec-head"><div><div class="eyebrow">${g.online ? 'No jogo agora' : 'Última sessão no jogo'}${g.truck ? ' · ' + esc(g.truck) : ''}</div><h2 class="hrow" style="font-size:18px">${dayLine}${h.btn}</h2></div></div>
-    ${h.box}${job}
+    ${h.box}${g.collect === false ? '<div class="banner" style="margin:0;padding:8px 10px">Coleta pausada: nada do jogo é enviado.</div>' : g.blocked === 'profile' ? `<div class="banner" style="margin:0;padding:8px 10px">Jogando no perfil "${esc(g.profile)}", que não está ligado à carreira: nada é enviado.</div>` : ''}${job}
     <div class="row">${linked ? `<span class="muted" style="font-size:12.5px">O dia do app acompanha o jogo.</span><button class="btn sm ghost" data-act="tel-unlink">Desligar</button>`
       : gd ? `<button class="btn sm" data-act="tel-link">Ligar o dia do app ao jogo</button>` : ''}</div>
   </section>`;
@@ -104,5 +104,48 @@ async function telemetryAction(a) {
     commit(st => { st.settings.telemetry = { offset: st.gameDay - gd }; }); toast('Dia do app ligado ao jogo'); return true;
   }
   if (a === 'tel-unlink') { commit(st => { st.settings.telemetry = { offset: null }; }); toast('O dia do app volta a ser controlado só por você'); return true; }
+  return false;
+}
+
+/* ---------- Ajustes › Telemetria do jogo: o que está funcionando, coleta e perfil ligado ---------- */
+const DESKTOP_URL = 'https://github.com/altairjr/Realistic-Career-ATS/releases/latest/download/CarreiraRealista-Setup.exe';
+const agoTxt = iso => { if (!iso) return ''; const s = Math.round((Date.now() - Date.parse(iso)) / 1000); return s < 90 ? 'agora há pouco' : s < 3600 ? `há ${Math.round(s / 60)} min` : s < 86400 ? `há ${Math.round(s / 3600)} h` : `há ${Math.round(s / 86400)} dia(s)`; };
+const pcOnline = g => !!(g && g.pc_seen_at && Date.now() - Date.parse(g.pc_seen_at) < 3 * 60e3);
+const light = (lv, t, d) => `<div class="full" style="display:flex;gap:8px;align-items:flex-start"><span class="dot ${lv}" style="margin-top:6px;flex:none"></span><div><b style="font-weight:600">${t}</b>${d ? `<div class="muted" style="font-size:12.5px">${d}</div>` : ''}</div></div>`;
+
+function telemetryBlock() {
+  if (store.mode !== 'cloud' || !cloud.session) return hint('Entre na sua conta (Dados e sincronização) para usar a telemetria do jogo.');
+  if (cloud.gameOff) return hint('O servidor ainda não tem as tabelas da telemetria. Rode de novo o supabase/schema.sql no Supabase.');
+  const g = cloud.game || {}, collect = g.collect !== false;
+  const lights = [
+    pcOnline(g) ? light('on', 'Programa do PC conectado', `visto ${agoTxt(g.pc_seen_at)}`) : light('', 'Programa do PC desligado', g.pc_seen_at ? `visto pela última vez ${agoTxt(g.pc_seen_at)}` : 'Instale o Carreira Realista no PC (botão abaixo).'),
+    g.online && pcOnline(g) ? light('on', 'Jogo aberto', `${esc(g.game_version || '')}${g.plugin ? ` · plugin ${esc(g.plugin)}` : ''}`) : light('', 'Jogo fechado', g.plugin ? `plugin ${esc(g.plugin)}` : ''),
+    !collect ? light('wait', 'Coleta pausada', 'O plugin não grava e nada é enviado.') : g.blocked === 'profile' ? light('wait', `Perfil "${esc(g.profile)}" não ligado à carreira`, 'Nada deste perfil vai para o app.') : light('on', 'Coleta ligada', ''),
+    g.last_delivery ? light('on', `Última entrega: ${esc(g.last_delivery.title)}`, `${fmtN(E.n(g.last_delivery.miles))} mi · ${fmt(g.last_delivery.freight)} · ${agoTxt(g.last_delivery.at)}`) : ''
+  ].join('');
+  const L = labRow('tel.perfil', 'Perfil do jogo ligado à carreira');
+  return `${lights}
+    <div class="full"><label class="inline-opt"><input type="checkbox" data-act="tel-collect" ${collect ? 'checked' : ''}> Coleta ligada</label></div>
+    <div class="full">${L.row}${L.box}<div style="font-size:14px">Ligado: <b>${esc(g.linked_profile || 'nenhum (todos os perfis enviam)')}</b>${g.profile ? ` · no jogo agora: <b>${esc(g.profile)}</b>` : ''}</div></div>
+    <div class="full row">${g.profile && g.profile !== g.linked_profile ? `<button class="btn sm" data-act="tel-profile" data-name="${esc(g.profile)}">Ligar "${esc(g.profile)}"</button>` : ''}${g.linked_profile ? '<button class="btn sm ghost" data-act="tel-profile" data-name="">Aceitar todos os perfis</button>' : ''}</div>
+    <div class="full row"><a class="btn sm primary" href="${DESKTOP_URL}" target="_blank" rel="noopener">Baixar o Carreira Realista para PC</a></div>
+    ${hint('O programa do PC instala o plugin no jogo, envia as entregas e mostra o app por cima do jogo (Ctrl+Shift+Espaço). Guia em docs/telemetria.md.')}`;
+}
+function telemetrySummary() {
+  if (store.mode !== 'cloud' || !cloud.session) return 'Entre na conta para usar';
+  const g = cloud.game || {};
+  return [pcOnline(g) ? 'PC conectado' : 'PC desligado', g.collect === false ? 'coleta pausada' : g.blocked === 'profile' ? 'perfil não ligado' : 'coleta ligada', g.linked_profile ? `perfil ${g.linked_profile}` : ''].filter(Boolean).join(' · ');
+}
+async function telemetryControlAction(a, el) {
+  if (a === 'tel-collect') {
+    try { await setGameControl({ collect: el.checked }); toast(el.checked ? 'Coleta ligada' : 'Coleta pausada: o PC para de enviar em alguns segundos'); }
+    catch (e) { el.checked = !el.checked; toast('Sem conexão: tente de novo.'); }
+    render(); return true;
+  }
+  if (a === 'tel-profile') {
+    try { await setGameControl({ linked_profile: el.dataset.name || null }); toast(el.dataset.name ? `Perfil "${el.dataset.name}" ligado à carreira` : 'Todos os perfis enviam'); }
+    catch (e) { toast('Sem conexão: tente de novo.'); }
+    render(); return true;
+  }
   return false;
 }

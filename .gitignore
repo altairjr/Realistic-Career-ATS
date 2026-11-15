@@ -9,3 +9,8 @@ supabase/.temp/
 /*.xlsx
 /*.json.bak
 carreira-ats-*.json
+# app de PC: gerados no empacotamento
+desktop/lib/
+desktop/dist/
+desktop/node_modules/
+desktop/resources/*.dll

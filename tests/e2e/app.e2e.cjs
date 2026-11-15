@@ -246,3 +246,40 @@ test('situação do jogo: cartão no Painel, dia do app ligado ao jogo e rascunh
   assert.deepEqual(page.errors, []);
   await ctx.close();
 });
+
+test('telemetria no app: luzes, pausar coleta, ligar perfil e aviso no cartão do jogo', { skip }, async () => {
+  const [email, pass] = newAccount();
+  const { ctx, page } = await device({ width: 360, height: 760 });
+  await openApp(page); await createCareer(page); await login(page, email, pass, true);
+  const uid = mock.db.users.get(email).id, iso = new Date().toISOString();
+  mock.db.status.set(uid, { user_id: uid, game: 'ats', online: true, game_time: 20 * 1440, updated_at: iso, pc_seen_at: iso, collect: true, linked_profile: 'Altair Junior', profile: 'Teste', blocked: 'profile', plugin: '0.2.0', game_version: '1.62.2.2s', last_delivery: { title: 'Reno → Elko', miles: 290, freight: 3100, at: iso } });
+  await page.evaluate(() => cloudPoll());
+  await page.click('[data-tab="painel"]');
+  await page.waitForSelector('text=não está ligado à carreira');
+  await page.click('[data-tab="ajustes"]'); await page.locator('[data-modt]', { hasText: 'Telemetria do jogo' }).click();
+  const box = page.locator('.mod', { hasText: 'Telemetria do jogo' }).last();
+  assert.match(await box.innerText(), /Programa do PC conectado[\s\S]*Jogo aberto[\s\S]*Perfil "Teste" não ligado[\s\S]*Última entrega: Reno → Elko/);
+  await shot(page, 'telemetria-ajustes');
+  await page.click('[data-act="tel-collect"]');
+  await page.waitForFunction(() => cloud.game && cloud.game.collect === false);
+  assert.equal(mock.db.status.get(uid).collect, false); assert.equal(mock.db.status.get(uid).game_time, 20 * 1440, 'só a coluna da coleta mudou');
+  await page.click('[data-act="tel-profile"][data-name="Teste"]');
+  await page.waitForFunction(() => cloud.game.linked_profile === 'Teste');
+  assert.equal(mock.db.status.get(uid).linked_profile, 'Teste');
+  assert.ok(await overflow(page) <= 0);
+  assert.deepEqual(page.errors, []);
+  await ctx.close();
+});
+
+test('overlay: modo compacto com botão de esconder quando aberto pelo app de PC', { skip }, async () => {
+  const { ctx, page } = await device({ width: 440, height: 800 });
+  await ctx.addInitScript(() => { window.__hidden = 0; window.carreiraDesktop = { isDesktop: true, overlay: true, hideOverlay: () => { window.__hidden++; } }; });
+  await page.goto(site.url + '?overlay=1'); await page.waitForFunction(() => typeof store !== 'undefined');
+  assert.equal(await page.evaluate(() => document.documentElement.classList.contains('overlay')), true);
+  await shot(page, 'overlay');
+  await page.click('.ov-close');
+  assert.equal(await page.evaluate(() => window.__hidden), 1);
+  assert.ok(await overflow(page) <= 0);
+  assert.deepEqual(page.errors, []);
+  await ctx.close();
+});
