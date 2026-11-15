@@ -10,15 +10,24 @@ on:
 permissions:
   contents: write
 jobs:
-  instalador:
-    runs-on: windows-latest
+  # Os testes rodam no Linux (são os mesmos do workflow "test"); o instalador só é gerado se passarem.
+  testes:
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
       - name: Testes
         run: npm test
+  instalador:
+    needs: testes
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
       - name: Baixar o SDK oficial da SCS (1.16)
         shell: pwsh
         run: |
@@ -33,6 +42,7 @@ jobs:
           for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do set VS=%%i
           call "%VS%\VC\Auxiliary\Build\vcvars64.bat" || exit /b 1
           mkdir obj
+          if not exist desktop\resources mkdir desktop\resources
           cl /nologo /std:c++17 /O2 /EHsc /MT /LD /utf-8 /W3 /I "%SDK_INC%" telemetry\plugin\carreira_telemetria.cpp /Fo:obj\ /Fe:desktop\resources\carreira-telemetria.dll || exit /b 1
           dumpbin /exports desktop\resources\carreira-telemetria.dll | findstr /c:"scs_telemetry_init" || exit /b 1
       - name: Preparar e empacotar o app de PC
@@ -42,7 +52,7 @@ jobs:
           cd desktop
           npm install --no-audit --no-fund
           npm run dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: carreira-realista-instalador
           path: |
