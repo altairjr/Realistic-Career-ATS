@@ -167,7 +167,7 @@ function overlayClock() {
     <div class="sec-head"><div><div class="eyebrow">Tempo no jogo</div><h2 class="hrow" style="font-size:18px" id="ovClockNow">…</h2></div></div>
     <div class="row">${[1, 2, 4, 8].map(h => `<button class="btn sm" data-act="ov-adv" data-min="${h * 60}">+${h} h</button>`).join('')}</div>
     <div class="row" style="flex-wrap:nowrap;align-items:end"><div class="field" style="flex:1"><label for="ovH">Ir para</label><input id="ovH" type="time" step="60" value="06:00"></div><button class="btn sm primary" data-act="ov-set">Ir</button></div>
-    <div class="muted" style="font-size:12px" id="ovClockMsg">O comando é digitado no console quando você volta ao jogo com o caminhão parado.</div>
+    <div class="muted" style="font-size:12px" id="ovClockMsg">O comando é digitado no console quando você volta ao jogo (no menu do Esc ou parado).</div>
   </section>`;
 }
 async function overlayClockTick() {
@@ -175,7 +175,7 @@ async function overlayClockTick() {
   try {
     const c = await window.carreiraDesktop.gameClock(), msg = document.getElementById('ovClockMsg');
     el.textContent = c.online && typeof c.gameTime === 'number' ? `Dia ${Math.floor(c.gameTime / 1440) + 1} · ${hhmm(c.gameTime)}` : 'Jogo fechado';
-    if (msg && c.sim) msg.textContent = c.sim.why ? `Parado: ${c.sim.why}.` : c.sim.pending ? 'Pedido na fila: volte ao jogo e pare o caminhão.' : c.sim.last ? `${c.sim.last.ok ? 'Aplicado' : 'Erro'}: ${c.sim.last.text}` : 'O comando é digitado no console quando você volta ao jogo com o caminhão parado.';
+    if (msg && c.sim) msg.textContent = c.sim.why ? `Parado: ${c.sim.why}.` : c.sim.pending ? 'Pedido na fila: volte ao jogo (menu do Esc ou parado).' : c.sim.last ? `${c.sim.last.ok ? 'Aplicado' : 'Erro'}: ${c.sim.last.text}` : 'O comando é digitado no console quando você volta ao jogo (no menu do Esc ou parado).';
   } catch (e) {}
 }
 if (window.carreiraDesktop && window.carreiraDesktop.gameClock) setInterval(overlayClockTick, 2000);

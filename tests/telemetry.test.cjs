@@ -232,15 +232,15 @@ test('simulação: warp ao abrir o jogo, tempo de carga após a entrega e avanç
   } finally { await m.close(); fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
-test('plugin: digita no console só com o caminhão parado, quebra avanços longos e recusa valores inválidos', { skip: !gpp && 'g++ não instalado' }, () => {
+test('plugin: digita no console com o caminhão parado ou no menu do Esc, quebra avanços longos e recusa valores inválidos', { skip: !gpp && 'g++ não instalado' }, () => {
   const dir = tmp(), exe = path.join(dir, 'jogo');
   try {
     execFileSync('g++', ['-std=c++17', '-I', path.join(__dirname, 'telemetry', 'sdk-shim'), '-o', exe, path.join(__dirname, 'telemetry', 'harness.cpp'), path.join(ROOT, 'telemetry', 'plugin', 'carreira_telemetria.cpp')]);
     execFileSync(exe, [path.join(__dirname, 'telemetry', 'sessao-comandos.txt')], { env: { ...process.env, CARREIRA_TELEMETRIA_DIR: dir }, stdio: 'pipe' });
     assert.deepEqual(fs.readFileSync(path.join(dir, 'teclado.txt'), 'utf8').trim().split('\n'),
-      ['<console>', 'warp 0.9', 'g_set_time 15 30', '<console>', '<console>', 'g_set_time 2 30', 'g_set_time 14 30', 'g_set_time 16 30', 'g_set_time 6 30', '<console>']);
+      ['<console>', 'warp 0.9', 'g_set_time 15 30', '<console>', '<console>', 'g_set_time 2 30', 'g_set_time 14 30', 'g_set_time 16 30', 'g_set_time 6 30', '<console>', '<console>', 'warp 1', '<console>']);
     const cmds = fs.readFileSync(path.join(dir, 'telemetria.jsonl'), 'utf8').trim().split('\n').map(l => JSON.parse(l)).filter(l => l.t === 'cmd');
-    assert.deepEqual(cmds.map(c => [c.id, c.ok]), [['7', true], ['8', false], ['9', true]]);
+    assert.deepEqual(cmds.map(c => [c.id, c.ok]), [['7', true], ['8', false], ['9', true], ['10', true]]);
     assert.match(cmds[1].error, /warp/);
     assert.ok(!fs.existsSync(path.join(dir, 'comando.txt')), 'o plugin apaga o pedido depois de ler');
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }

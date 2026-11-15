@@ -92,7 +92,7 @@
 ### Simulação no jogo e ajustes do overlay (v0.21, esta versão)
 - **Instalador testado no Windows** (workflow `desktop` corrigido: testes no Linux, pasta da DLL criada).
 - **Overlay**: ao esconder, o foco volta ao jogo; janela cerca de 15% maior.
-- **Simulação no jogo**: warp automático ao abrir o jogo (ex.: 0,9), tempo de carga depois de cada entrega (padrão 1 h) e, no overlay, avançar o tempo (+1/2/4/8 h) ou ir para uma hora. O plugin 0.3 digita no console com o jogo em foco e o caminhão parado.
+- **Simulação no jogo**: warp automático ao abrir o jogo (ex.: 0,9), tempo de carga depois de cada entrega (padrão 1 h) e, no overlay, avançar o tempo (+1/2/4/8 h) ou ir para uma hora. O plugin 0.3 digita no console com o jogo em foco e o perfil carregado, também no menu do Esc e sem caminhão; o warp vale assim que você entra no perfil.
 - **Testes**: 46 automáticos (plugin digitando no console, fila e junção de pedidos, console desligado, perfil) e 11 no navegador.
 
 ### Fase 5 — parte já feita
