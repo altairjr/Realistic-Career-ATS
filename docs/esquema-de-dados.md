@@ -17,9 +17,9 @@ Limite a respeitar: cada documento pode ter no máximo 256 KiB. Por isso as sema
 | `currentContractId` | Contrato ativo. |
 | `week` | Semana em aberto: `start` e `trips[]`. |
 | `payroll[]` | Holerites ou acertos: `weekStart`, `payday`, `amount`, `status`, `paidDay`, `breakdown` (`gross`, `ded`, `takeHome`, `living`, `net`, `tax`, `safety`). |
-| `ledger[]` | Extrato: `day`, `desc`, `amount`, `ref`, `locked`. |
+| `ledger[]` | Extrato: `day`, `desc`, `amount`, `ref`, `locked` e, desde a v0.22, `detail[]` (`label`, `value`, `cls`) com a conta que chega no total. Lançamentos antigos sem `detail` são explicados na hora pelo DRE da semana no histórico. |
 | `bank` | `opening` (saldo inicial), `archived` (soma dos lançamentos compactados), `loanTotal`. |
-| `career` | `startDay`, `billedThrough`, `loanNext`, `safetyStreak`, `k401`, `violations[]`. |
+| `career` | `startDay`, `billedThrough`, `loanNext`, `safetyStreak`, `k401`, `violations[]`, `rent` (`paidThrough` = início da última semana de aluguel paga; v0.22). |
 | `_rev`, `_by` | Controle de sincronização (carimbo de tempo e aparelho que gravou). |
 
 Saldo bancário = `bank.opening + bank.archived + soma(ledger.amount)`.
@@ -31,7 +31,7 @@ Saldo bancário = `bank.opening + bank.archived + soma(ledger.amount)`.
   - Carro: `car` (`mode` = `borrowed` ou `owned`, `pct`, `factor`, `bonusOn`, `bonusFactor`, `personal`, `costPerMile`).
 
 ### Referências do extrato (`ledger[].ref`)
-`trip:<id>` (viagem de carro), `pay:<id>` (holerite), `living:<id>` (despesas no fechamento), `bill:<início da semana>` (contas fixas), `loan:<dia>` (parcela), `fine:<início da semana>` (multa de fiscalização), `adj` (ajuste manual).
+`trip:<id>` (viagem de carro), `pay:<id>` (holerite), `living:<id>` (despesas no fechamento), `bill:<início da semana>` (contas fixas), `loan:<dia>` (parcela), `fine:<início da semana>` (multa de fiscalização), `rent:<início da semana>` (aluguel pago pelo jogador, v0.22), `adj` (ajuste manual).
 
 ## Semana fechada (`history[]`, um documento por semana)
 `id`, `start`, `end`, `closedDay`, `contractId`, `trips[]`, `dre` (resultado calculado no fechamento), `settings` (regras efetivas no fechamento), `violations[]`.

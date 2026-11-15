@@ -215,8 +215,20 @@ details.week .body{padding:12px 14px;display:flex;flex-direction:column;gap:12px
 /* Navegação inferior */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--panel);border-top:1px solid var(--line);
   padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
-nav.tabs .in{max-width:860px;margin:0 auto;display:grid;grid-template-columns:repeat(6,1fr)}
-nav.tabs button{border:0;background:none;padding:8px 0 9px;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--muted);font-size:11.5px;font-weight:600;letter-spacing:.02em}
+nav.tabs .in{max-width:960px;margin:0 auto;display:grid;grid-template-columns:repeat(8,1fr)}
+nav.tabs button{border:0;background:none;padding:8px 0 9px;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--muted);font-size:11.5px;font-weight:600;letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 8 abas no celular: o nome encolhe com a tela para caber mesmo com fonte reserva larga (sem a Barlow) */
+@media (max-width:420px){nav.tabs button{font-size:clamp(8px,2.5vw,10px);letter-spacing:-.03em}nav.tabs button svg{width:20px;height:20px}}
+/* extrato com detalhe (aba Banco) */
+details.lx>summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center}
+details.lx>summary::-webkit-details-marker{display:none}
+.lx-plus{width:20px;height:20px;border-radius:50%;border:1px solid var(--line);display:inline-grid;place-items:center;font-size:13px;line-height:1;color:var(--muted)}
+details.lx[open] .lx-plus{transform:rotate(45deg)}
+.ledger summary.li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center}
+.lx-body{padding:2px 0 10px 30px}
+.lx-bk td:last-child{white-space:nowrap}
+.bank-card{display:flex;flex-direction:column;gap:12px}
+.bank-bal{font-family:var(--display);font-size:34px;font-weight:600;line-height:1.1}
 nav.tabs button svg{width:22px;height:22px}
 nav.tabs button[aria-current="page"]{color:var(--sign)}
 nav.tabs button[aria-current="page"] svg{stroke-width:2.3}
@@ -303,6 +315,8 @@ html.overlay header.sign button,html.overlay header.sign input{-webkit-app-regio
     <button type="button" data-tab="painel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13a8 8 0 1 1 16 0"/><path d="M12 13l4-4"/><path d="M4 17h16"/></svg>Painel</button>
     <button type="button" data-tab="diario"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>Diário</button>
     <button type="button" data-tab="holerite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9v.01M18 15v.01"/></svg>Holerite</button>
+    <button type="button" data-tab="banco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 20h18"/></svg>Banco</button>
+    <button type="button" data-tab="vida"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/></svg>Vida</button>
     <button type="button" data-tab="historico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 7v5l3 2"/></svg>Histórico</button>
     <button type="button" data-tab="carreira"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2.2"/><path d="M5.8 16c.6-1.5 1.8-2.3 3.2-2.3s2.6.8 3.2 2.3"/><path d="M14.5 10h4M14.5 13.5h3"/></svg>Carreira</button>
     <button type="button" data-tab="ajustes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Ajustes</button>

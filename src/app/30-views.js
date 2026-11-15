@@ -15,7 +15,7 @@ function render() {
   $('#fab').hidden = !fabOn; document.body.classList.toggle('has-fab', fabOn);
   const v = $('#view');
   if (!S) { v.innerHTML = onboarding(); return; }
-  v.innerHTML = ({ painel, diario, holerite, historico, ajustes, carreira })[tab]();
+  v.innerHTML = (({ painel, diario, holerite, banco, vida, historico, ajustes, carreira })[tab] || painel)();
 }
 
 function onboarding() {
@@ -46,7 +46,7 @@ function painel() {
   const ready = S.payroll.filter(p => p.status !== 'paid' && p.payday <= S.gameDay);
   const readyB = ready.length ? `<div class="banner"><div><b>${ready.length === 1 ? 'Um holerite está' : ready.length + ' holerites estão'} disponível${ready.length === 1 ? '' : 'is'}.</b><div class="muted" style="font-size:13.5px">${fmt(ready.reduce((a, p) => a + p.amount, 0))} para depositar no saldo.</div></div><button class="btn primary" data-act="pay-ready">Receber</button></div>` : '';
   const visaB = S.profile.visa === 'other' ? (h => `<div class="banner"><div style="flex:1;min-width:0"><div class="lab-row" style="justify-content:flex-start"><b>CDL não-domiciliada restrita.</b>${h.btn}</div><div class="muted" style="font-size:13.5px">Desde 15/03/2026, a FMCSA só emite CDL não-domiciliada para vistos H-2A, H-2B e E-2. Ajuste o status em Carreira › Motorista.</div>${h.box}</div></div>`)(bh('ui.visto', 'CDL')) : '';
-  return `${overlayClock()}${draftsBanner()}${gameCard()}${banner}${negB}${violB}${readyB}${visaB}
+  return `${overlayClock()}${draftsBanner()}${gameCard()}${banner}${negB}${rentBanner()}${violB}${readyB}${visaB}
   <div class="stats two">
     <div class="panel stat">${eyeH('ui.receber', 'A receber')}<div class="v">${fmt(pendingPay(S))}</div><div class="s">${next ? 'Próximo: ' + dayFull(next.payday) : 'Nenhum holerite pendente'}</div></div>
     <div class="panel stat">${eyeH('ui.totalsaldo', 'Total com saldo')}<div class="v">${fmt(balance(S) + pendingPay(S))}</div><div class="s">Saldo + holerites pendentes</div></div>
@@ -56,7 +56,7 @@ function painel() {
       <button class="btn sm" data-act="close-week" ${S.week.trips.length ? '' : 'disabled'}>Fechar semana</button></div>
     ${TP.box}${dreSummary(d)}
     <details class="more"><summary>Ver detalhamento</summary><div style="padding:0 12px 12px">${dreTable(d, s)}</div></details>
-    <p class="muted" style="margin:6px 0 0;font-size:13px">${d.taxType === '1099' ? 'Ao fechar, o acerto (settlement) deposita o líquido no dia do pagamento, já sem a reserva de impostos; as despesas e os custos saem do saldo.' : 'Ao fechar, o holerite deposita o líquido do contracheque no dia do pagamento, e as despesas e o custo de vida saem do saldo.'}${s.borrowed.on && d.counts.borrowed && s.borrowed.settle === 'immediate' ? ` Viagens de carro na semana: ${fmt(d.borrowedTotal)}, já creditado no saldo.` : ''}</p>
+    <p class="muted" style="margin:6px 0 0;font-size:13px">${d.taxType === '1099' ? 'Ao fechar, o acerto (settlement) deposita o líquido no dia do pagamento, já sem a reserva de impostos; as despesas e os custos saem do saldo.' : 'Ao fechar, o holerite deposita o líquido do contracheque no dia do pagamento, e as despesas da semana saem do saldo. O aluguel você paga na aba Vida.'}${s.borrowed.on && d.counts.borrowed && s.borrowed.settle === 'immediate' ? ` Viagens de carro na semana: ${fmt(d.borrowedTotal)}, já creditado no saldo.` : ''}</p>
   </section>
   <div class="muted" style="font-size:13px">${syncBadge()}</div>`;
 }
@@ -232,16 +232,15 @@ function holerite() {
         <tr><td>${self ? 'Receita bruta' : 'Salário bruto'}${p.breakdown.safety ? ' (inclui bônus de segurança)' : ''}</td><td>${fmt(p.breakdown.gross)}</td></tr>
         <tr><td>(−) ${self ? 'Reserva de impostos e descontos' : 'Impostos e descontos'}</td><td>${fmt(p.breakdown.ded)}</td></tr>
         <tr class="t"><td>(=) ${self ? 'Líquido do acerto' : 'Líquido do holerite'}</td><td>${fmt(p.breakdown.takeHome)}</td></tr>
-        ${p.amount === p.breakdown.takeHome && E.n(p.breakdown.living) > 0 ? `<tr><td class="muted">Despesas e custo de vida (já debitados do saldo)</td><td class="muted">${fmt(-p.breakdown.living)}</td></tr>` : ''}
+        ${p.amount === p.breakdown.takeHome && E.n(p.breakdown.living) > 0 ? `<tr><td class="muted">Despesas da semana (já debitadas do saldo, detalhe no Banco)</td><td class="muted">${fmt(-p.breakdown.living)}</td></tr>` : ''}
       </tbody></table>` : '';
     return `<div class="panel pad" style="display:flex;flex-direction:column;gap:8px">
-      <div class="row between"><div><div class="eyebrow">${self ? 'Acerto (settlement) da semana' : 'Holerite da semana'}</div><h3>${weekLabel(p.weekStart)}</h3></div><div style="font-family:var(--display);font-size:24px;font-weight:600" class="${p.amount < 0 ? 'neg' : ''}">${fmt(p.amount)}</div></div>
+      <div class="row between"><div><div class="eyebrow">${self ? 'Acerto (settlement) da semana' : 'Holerite da semana'}</div><h3>${weekLabel(p.weekStart, p.weekEnd)}</h3></div><div style="font-family:var(--display);font-size:24px;font-weight:600" class="${p.amount < 0 ? 'neg' : ''}">${fmt(p.amount)}</div></div>
       ${bk}
       <div class="row between"><div class="row" style="gap:8px">${chip}<span class="muted" style="font-size:13px">Pagamento: ${dayFull(p.payday)}</span></div>
       ${paid ? '' : `<button class="btn sm ${ready ? 'primary' : ''}" data-pay="${esc(p.id)}">${ready ? 'Receber' : 'Receber agora'}</button>`}</div>
     </div>`;
   }).join('') || `<div class="empty">Nenhum holerite ainda. Feche uma semana no Painel para gerar o primeiro.</div>`;
-  const led = S.ledger.slice().sort((a, b) => b.day - a.day || 0).slice(0, 40).map(e => `<div class="li"><div><div>${esc(e.desc)}</div><div class="muted" style="font-size:12.5px">${dayFull(e.day)}${!e.locked && e.ref && e.ref.startsWith('trip:') ? ' · semana em aberto' : ''}</div></div><b class="${e.amount < 0 ? 'neg' : 'pos'}">${e.amount < 0 ? '' : '+'}${fmt(e.amount)}</b></div>`).join('') || '<div class="muted">Sem movimentações.</div>';
   const sf = s.safety, streak = S.career.safetyStreak || 0;
   const extra = s.loan.on ? ['Empréstimo', fmt(S.bank.loanTotal), `Parcela de ${fmt(s.loan.installment)} no dia ${S.career.loanNext}`] : S.career.k401 ? ['401(k) acumulado', fmt(S.career.k401), 'Aposentadoria guardada'] : null;
   return `<div class="stats two">
@@ -252,11 +251,7 @@ function holerite() {
   ${(h => `<div class="sec-head"><h2 class="hrow">Holerites${h.btn}</h2></div>${h.box}`)(help('ui.holerite', 'Holerites'))}
   ${items}
 
-  <section class="panel pad" style="display:flex;flex-direction:column;gap:8px">
-    ${(h => `<div class="sec-head"><h2 class="hrow">Extrato${h.btn}</h2><button class="btn sm" data-act="adjust">Ajustar saldo</button></div>${h.box}`)(help('ui.extrato', 'Extrato'))}
-    <div class="ledger">${led}</div>
-    ${E.n(S.bank.archived) ? `<p class="muted" style="margin:0;font-size:12.5px">Lançamentos com mais de 12 semanas ficam somados no saldo (${fmt(S.bank.archived)}) e saem desta lista.</p>` : ''}
-  </section>`;
+  <div class="panel pad row between"><span class="muted">O extrato da conta, com o detalhe de cada entrada e saída, fica na aba Banco.</span><button class="btn sm" data-goto="banco">Abrir Banco</button></div>`;
 }
 
 function historico() {
@@ -273,7 +268,7 @@ function historico() {
   ${weeks.map(w => {
     const ws = E.mergeDefaults(w.settings || SS());
     const rows = w.trips.slice().sort((a, b) => a.day - b.day).map(t => `<tr><td>${t.day}</td><td>${esc(t.origin)}</td><td>${esc(t.dest)}</td><td>${t.type === 'borrowed' ? 'Carro' : 'Caminhão'}</td><td>${esc(t.status)}</td><td class="num">${fmtN(t.miles)}</td><td class="num">${fmt(t.freight)}</td><td class="num">${fmt(t.bonus || 0)}</td><td class="num">${[t.breakfast, t.lunch, t.dinner, t.hotel].map(x => E.n(x)).join('/')}</td><td class="num">${fmt(t.fines || 0)}</td><td class="num">${t.type === 'borrowed' ? fmt(E.borrowedValue(t, ws)) : fmt(E.tripPay(t, ws).total)}</td></tr>`).join('');
-    return `<details class="week"><summary><div><b>Semana ${weekLabel(w.start).toLowerCase()}</b><div class="muted" style="font-size:13px">${w.trips.length} viage${w.trips.length === 1 ? 'm' : 'ns'} · ${fmtN(w.dre.miles)} mi · bruto ${fmt(w.dre.revenue)}</div></div><b class="${w.dre.net < 0 ? 'neg' : 'pos'}" style="font-size:20px">${fmt(w.dre.net)}</b></summary>
+    return `<details class="week"><summary><div><b>Semana ${weekLabel(w.start, w.end).toLowerCase()}</b><div class="muted" style="font-size:13px">${w.trips.length} viage${w.trips.length === 1 ? 'm' : 'ns'} · ${fmtN(w.dre.miles)} mi · bruto ${fmt(w.dre.revenue)}</div></div><b class="${w.dre.net < 0 ? 'neg' : 'pos'}" style="font-size:20px">${fmt(w.dre.net)}</b></summary>
       <div class="body">${dreTable(w.dre, ws)}
         <div class="scroll"><table class="tbl"><thead><tr><th>Dia</th><th>Origem</th><th>Destino</th><th>Tipo</th><th>Status</th><th class="num">mi</th><th class="num">Frete</th><th class="num">Bônus</th><th class="num" title="Cafés / almoços / jantas / noites em hotel">C/A/J/H</th><th class="num">Multas</th><th class="num">Ganho / resultado</th></tr></thead><tbody>${rows}</tbody></table></div>
         <div class="row"><button class="btn sm danger" data-delweek="${esc(w.id)}">Excluir semana</button></div>

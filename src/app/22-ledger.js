@@ -18,9 +18,11 @@ function runBills(st) {
     if (d < E.n(C.startDay)) continue;
     if (s.bills.on && E.weekdayIdx(d, s) === E.n(s.bills.weekday)) {
       const ws = E.weekStartOf(d, s), items = [];
-      if (s.costs.housing.on && E.n(s.costs.housing.val)) items.push(['Moradia', E.n(s.costs.housing.val)]);
+      // a moradia (aluguel) não entra aqui desde a v0.22: o jogador paga na aba Vida
       if (s.opCosts.on && (E.n(s.opCosts.truckWeekly) + E.n(s.opCosts.otherWeekly))) items.push(['Parcela do caminhão e licenças', E.n(s.opCosts.truckWeekly) + E.n(s.opCosts.otherWeekly)]);
-      for (const [label, v] of items) st.ledger.push({ id: uid(), ref: 'bill:' + ws, day: d, desc: `${label} · semana ${weekLabel(ws).toLowerCase()}`, amount: -E.r2(v), locked: true });
+      const O = s.opCosts;
+      for (const [label, v] of items) st.ledger.push({ id: uid(), ref: 'bill:' + ws, day: d, desc: `${label} · semana ${weekLabel(ws).toLowerCase()}`, amount: -E.r2(v), locked: true,
+        detail: [{ label: 'Parcela / leasing do caminhão', value: -E.r2(E.n(O.truckWeekly)), cls: '' }, { label: 'Licenças, IFTA, ELD e escrow', value: -E.r2(E.n(O.otherWeekly)), cls: '' }].filter(l => l.value) });
     }
     if (s.loan.on && C.loanNext && d >= C.loanNext) payLoan(st, s, d);
   }
@@ -32,7 +34,11 @@ function loanDueInWeek(st, start) {
   if (s.loan.on && C.loanNext) for (let d = C.loanNext; d <= start + 6; d += loanPeriod(s)) if (d >= start && d > C.billedThrough) sum += E.n(s.loan.installment);
   return E.r2(sum);
 }
-const billedThisWeek = st => E.r2(-st.ledger.filter(e => e.ref === 'bill:' + st.week.start).reduce((a, e) => a + E.n(e.amount), 0));
+// Fim do período de pagamento: fechando antes do fim da semana (ex.: na sexta), o período termina hoje e o fim de
+// semana vai para o próximo holerite; fechando depois, termina no 7º dia.
+const periodEnd = (st = S) => Math.min(st.week.start + 6, Math.max(st.gameDay, st.week.start));
+// contas fixas já cobradas no período pelo calendário (sem a moradia antiga: o aluguel agora é à parte)
+const billedThisWeek = (st, end = periodEnd(st)) => E.r2(-st.ledger.filter(e => String(e.ref || '').startsWith('bill:') && e.day >= st.week.start && e.day <= end && !/^Moradia/.test(e.desc || '')).reduce((a, e) => a + E.n(e.amount), 0));
 const weekDre = (extra = {}) => E.dre(S.week.trips, SS(), { loan: loanDueInWeek(S, S.week.start), ...extra });
 function loanForecast(st) {
   const s = st.settings; let total = E.n(st.bank.loanTotal), n = 0, d = st.career.loanNext || st.gameDay;
@@ -70,17 +76,24 @@ function weekClosePlan() {
     else newStreak = 0;
   }
   const d = weekDre({ safety });
-  // parcelas do empréstimo e contas já cobradas pelo calendário não saem de novo no fechamento
-  const living = E.r2(Math.max(0, d.variable.total + d.opCosts.total + d.fixed.total - d.fixed.loan - billedThisWeek(S)));
-  return { d, safety, newStreak, living, viol, hosHit };
+  // parcelas do empréstimo e contas já cobradas pelo calendário não saem de novo no fechamento;
+  // o aluguel também não (o jogador paga na aba Vida)
+  const billed = billedThisWeek(S);
+  const living = E.r2(Math.max(0, d.variable.total + d.opCosts.total + d.fixed.total - d.fixed.loan - d.fixed.housing - billed));
+  const livingDetail = reconcile(livingLines(d, s, { housing: false }), -living, '(+) Já cobrado antes pelo calendário (contas fixas da semana)');
+  return { d, safety, newStreak, living, livingDetail, viol, hosHit };
 }
 
 function autoPay(st) {
   if (!st.settings.payroll.autoPay) return;
   st.payroll.filter(p => p.status !== 'paid' && p.payday <= st.gameDay).forEach(p => payEntry(st, p, p.payday));
 }
+// Semana vazia que já passou: anda de 7 em 7 dias a partir do início atual (mantém o ciclo, ex.: sábado a sexta
+// depois de fechar numa sexta). O dia do jogo nunca muda por causa do fechamento.
 function normalizeWeek(st) {
-  if (!st.week.trips.length) st.week.start = E.weekStartOf(st.gameDay, st.settings);
+  if (st.week.trips.length) return;
+  if (!(st.week.start >= 1)) { st.week.start = E.weekStartOf(st.gameDay, st.settings); return; }
+  if (st.gameDay > st.week.start + 6) st.week.start += 7 * Math.floor((st.gameDay - st.week.start) / 7);
 }
 function commit(fn, { view = true } = {}) {
   fn(S);

@@ -1,7 +1,7 @@
 {
   "name": "carreira-realista-pc",
   "productName": "Carreira Realista",
-  "version": "0.21.3",
+  "version": "0.22.0",
   "description": "Carreira Realista ATS no PC: telemetria do jogo (plugin), ícone na bandeja e o app por cima do jogo.",
   "main": "main.cjs",
   "private": true,

@@ -9,7 +9,7 @@ const path = require('node:path');
 function load() {
   const ctx = vm.createContext({ console, Math, Date, JSON, TextDecoder, TextEncoder });
   const run = f => vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8'), ctx, { filename: f });
-  ['engine.js', 'app/00-core.js', 'app/20-state.js', 'app/22-ledger.js', 'app/60-xlsx.js', 'app/62-sheet-io.js'].forEach(run);
+  ['engine.js', 'app/00-core.js', 'app/20-state.js', 'app/22-ledger.js', 'app/32-bank.js', 'app/60-xlsx.js', 'app/62-sheet-io.js'].forEach(run);
   return { ctx, js: code => vm.runInContext(code, ctx) };
 }
 const plain = o => JSON.parse(JSON.stringify(o));
@@ -41,11 +41,112 @@ test('dados antigos: nomes de operação e campos obsoletos são atualizados', (
   assert.equal(st.contracts[0].terms.ruleset, undefined);
 });
 
-test('contas fixas: moradia sai toda segunda, mesmo sem viagens', () => {
+test('aluguel: não sai sozinho; vence toda segunda, atrasa e o jogador paga a semana mais antiga', () => {
   const { js } = load();
-  const r = plain(js(`(() => { const st = newCareer({ opening: 3000 }); st.gameDay = 15; runBills(st); return { days: st.ledger.map(e => e.day), bal: balance(st) }; })()`));
-  assert.deepEqual(r.days, [1, 8, 15]);
-  assert.equal(r.bal, 1500);
+  const r = plain(js(`(() => { const st = newCareer({ opening: 3000 }); S = st; st.gameDay = 15; runBills(st);
+    const before = { led: st.ledger.length, bal: balance(st) }, i = rentInfo(st);
+    const info = { open: i.open.map(o => o.ws), overdue: i.overdue.length, total: i.overdueTotal, paidCur: i.paidCur };
+    const n = payRent(st, 1), after1 = rentInfo(st);
+    payRent(st, 5); const after = rentInfo(st);
+    return { before, info, n, next: after1.open[0].ws, desc: st.ledger[0].desc, bal: balance(st), left: after.open.length, paidCur: after.paidCur }; })()`));
+  assert.deepEqual(r.before, { led: 0, bal: 3000 }, 'nada sai do saldo sozinho');
+  assert.deepEqual(r.info, { open: [1, 8, 15], overdue: 2, total: 1000, paidCur: false });
+  assert.equal(r.n, 1); assert.equal(r.next, 8, 'paga a semana mais antiga primeiro');
+  assert.equal(r.desc, 'Aluguel · semana dia 1–7');
+  assert.equal(r.bal, 1500); assert.equal(r.left, 0); assert.equal(r.paidCur, true);
+});
+
+test('aluguel: carreira antiga com moradia já cobrada pelo calendário não paga de novo', () => {
+  const { js } = load();
+  const r = plain(js(`(() => { const st = newCareer({ opening: 1000 }); st.gameDay = 10; delete st.career.rent;
+    st.ledger.push({ id: 'm', ref: 'bill:8', day: 8, desc: 'Moradia · semana dia 8–14', amount: -500, locked: true });
+    normalize(st); S = st; return { paid: st.career.rent.paidThrough, open: rentInfo(st).open.length, detail: entryDetail(st.ledger[0])[0].label }; })()`));
+  assert.deepEqual([r.paid, r.open], [8, 0]);
+  assert.match(r.detail, /Moradia/);
+});
+
+test('fechamento: despesas da semana sem o aluguel, com o detalhe que soma o total', () => {
+  const { js } = load();
+  const r = plain(js(`(() => { S = newCareer({ opening: 3000 }); H = []; S.settings.bills.on = false;
+    const eff = SS(), mk = o => Object.assign({ id: uid(), type: 'company', day: 2 }, E.snapshotFor('company', eff), { rules: E.rulesSnapshot(eff) }, o);
+    S.week.trips = [mk({ miles: 300, freight: 1500, breakfast: 1, lunch: 1, dinner: 1, hotel: 1, fines: 120 })];
+    const p = weekClosePlan(), sum = p.livingDetail.reduce((a, l) => a + (l.cls === 'total' ? 0 : l.value || 0), 0);
+    return { living: p.living, sum: E.r2(sum), housing: p.d.fixed.housing, labels: p.livingDetail.map(l => l.label) }; })()`));
+  assert.ok(r.housing > 0);
+  assert.equal(r.sum, -r.living, 'as linhas do detalhe somam o lançamento');
+  assert.ok(!r.labels.some(l => /Moradia/.test(l)), 'o aluguel não entra nas despesas da semana');
+  assert.ok(r.labels.includes('Multas de trânsito'));
+  assert.ok(r.labels.some(l => /^Almoços \(1 × /.test(l)));
+});
+
+test('extrato antigo: "Despesas e custo de vida" é explicado pelo DRE da semana no histórico', () => {
+  const { js } = load();
+  const r = plain(js(`(() => { S = newCareer({ opening: 3000 }); S.settings.bills.on = false;
+    const eff = SS(), mk = o => Object.assign({ id: uid(), type: 'company', day: 2 }, E.snapshotFor('company', eff), { rules: E.rulesSnapshot(eff) }, o);
+    const trips = [mk({ miles: 300, freight: 1500, lunch: 2, fines: 50 })], d = E.dre(trips, eff), living = E.r2(d.variable.total + d.opCosts.total + d.fixed.total);
+    H = [{ id: 'w1', start: 1, end: 7, trips, dre: d, settings: eff }];
+    S.payroll.push({ id: 'p1', weekStart: 1, payday: 12, amount: d.takeHome, status: 'paid', breakdown: {} });
+    const e = { id: 'x', ref: 'living:p1', day: 8, desc: 'Despesas e custo de vida · semana dia 1–7', amount: -living, locked: true };
+    const lines = entryDetail(e), pay = entryDetail({ ref: 'pay:p1', amount: d.takeHome, desc: 'Holerite' });
+    return { sum: E.r2(lines.reduce((a, l) => a + (l.cls === 'total' ? 0 : l.value || 0), 0)), amount: e.amount, labels: lines.map(l => l.label), payLast: pay[pay.length - 1], payLabels: pay.map(l => l.label) }; })()`));
+  assert.equal(r.sum, r.amount);
+  assert.ok(r.labels.includes('Moradia (aluguel da semana)'));
+  assert.match(r.payLast.label, /Líquido do holerite/); assert.ok(!r.payLabels.includes('Diferença (ajuste do pagamento)'), 'holerite fecha sem diferença');
+  assert.ok(r.payLabels.some(l => /Salário bruto/.test(l)));
+});
+
+test('moradia cobrada uma vez só: 3 semanas com contas pelo calendário, fechamento e aluguel pago', () => {
+  const { js } = load();
+  const r = plain(js(`(() => { S = newCareer({ opening: 10000 }); H = []; const st = S, s0 = SS(); st.settings.bills.on = true;
+    const housing = E.n(st.settings.costs.housing.val); let varTotal = 0, payTotal = 0;
+    for (let w = 0; w < 3; w++) {
+      const eff = SS(), start = st.week.start, mk = o => Object.assign({ id: uid(), type: 'company', day: start + 1 }, E.snapshotFor('company', eff), { rules: E.rulesSnapshot(eff) }, o);
+      st.week.trips = [mk({ miles: 200, freight: 900, lunch: 2, dinner: 1 })];
+      st.gameDay = start + 7; runBills(st);
+      const plan = weekClosePlan(); varTotal += plan.d.variable.total + plan.d.opCosts.total;
+      st.ledger.push({ id: uid(), ref: 'living:x' + w, day: st.gameDay, desc: 'Despesas da semana', amount: -plan.living, locked: true });
+      st.ledger.push({ id: uid(), ref: 'pay:x' + w, day: st.gameDay, desc: 'Holerite', amount: plan.d.takeHome, locked: true }); payTotal += plan.d.takeHome;
+      st.week = { start: start + 7, trips: [] };
+    }
+    const due = rentInfo(st).open.length; payRent(st, due);
+    const rentOut = -st.ledger.filter(e => String(e.ref).startsWith('rent:')).reduce((a, e) => a + e.amount, 0);
+    const moradiaBills = st.ledger.filter(e => /Moradia/.test(e.desc)).length;
+    return { housing, rentOut, due, moradiaBills, bal: balance(st), expect: E.r2(10000 + payTotal - varTotal - rentOut) }; })()`));
+  assert.equal(r.moradiaBills, 0, 'o calendário não cobra mais a moradia');
+  assert.equal(r.due, 4, 'semanas 1, 8, 15 e a atual (22)');
+  assert.equal(r.rentOut, 4 * r.housing, 'uma moradia por semana');
+  assert.equal(r.bal, r.expect, 'saldo = holerites − despesas de viagem − aluguéis: moradia não aparece em dobro');
+});
+
+test('extrato antigo: semana em que a moradia saiu pelo calendário não mostra moradia no detalhe das despesas', () => {
+  const { js } = load();
+  const r = plain(js(`(() => { S = newCareer({ opening: 3000 }); const eff = SS();
+    const mk = o => Object.assign({ id: uid(), type: 'company', day: 16 }, E.snapshotFor('company', eff), { rules: E.rulesSnapshot(eff) }, o);
+    const trips = [mk({ miles: 300, freight: 1500, lunch: 2 })], d = E.dre(trips, eff);
+    H = [{ id: 'w', start: 15, end: 21, trips, dre: d, settings: eff }]; S.payroll.push({ id: 'p', weekStart: 15, payday: 26, amount: 1, status: 'paid', breakdown: {} });
+    const living = E.r2(d.variable.total + d.opCosts.total + d.fixed.total - d.fixed.housing);   // regra antiga, moradia já cobrada
+    return entryDetail({ ref: 'living:p', amount: -living, desc: 'Despesas e custo de vida · semana dia 15–21' }).map(l => [l.label, l.value]); })()`));
+  assert.ok(!r.some(([l, v]) => /Moradia \(aluguel/.test(l)), JSON.stringify(r));
+  assert.match(r[r.length - 1][0], /saiu à parte/);
+});
+
+test('fechar na sexta: o período termina na sexta, o dia não avança e o fim de semana vai para o próximo holerite', () => {
+  const { js } = load();
+  const r = plain(js(`(() => { S = newCareer({ opening: 3000, gameDay: 15 }); H = []; const st = S;
+    st.gameDay = 19; const end = periodEnd(st), payday = E.paydayFor(end, SS());
+    st.week = { start: end + 1, trips: [] };
+    const seq = []; for (const d of [19, 20, 26, 27, 34]) { st.gameDay = d; normalizeWeek(st); seq.push(st.week.start); }
+    // período que já começa num sábado: fecha de novo na sexta seguinte
+    st.gameDay = 26; st.week = { start: 20, trips: [{ id: 't', day: 21 }] };
+    const end2 = periodEnd(st), payday2 = E.paydayFor(end2, SS());
+    st.gameDay = 30; const late = periodEnd(st);
+    return { start0: E.weekStartOf(15, SS()), end, payday, seq, end2, payday2, late, wd: E.WEEKDAYS[E.weekdayIdx(19, SS())] }; })()`));
+  assert.equal(r.start0, 15); assert.equal(r.wd, 'Sex');
+  assert.equal(r.end, 19, 'fechando na sexta, o período vai até sexta');
+  assert.equal(r.payday, 26, 'pago na sexta seguinte (pay lag de 1 semana)');
+  assert.deepEqual(r.seq, [20, 20, 20, 27, 34], 'o próximo período começa no sábado e segue de 7 em 7 dias');
+  assert.equal(r.end2, 26); assert.equal(r.payday2, 33);
+  assert.equal(r.late, 26, 'fechando atrasado, o período tem 7 dias');
 });
 
 test('empréstimo: parcela mensal paga os juros e abate a dívida', () => {

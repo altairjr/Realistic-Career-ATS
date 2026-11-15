@@ -22,7 +22,9 @@ O app usa regras do mercado de transporte dos EUA (2026). Cada regra pode ser li
 
 ## Início e contas fixas
 - **Nova carreira**: assistente com nome, empresa, classificação, operação, dia do jogo e saldo inicial.
-- **Contas fixas pelo calendário**: no dia escolhido de cada semana saem a moradia e, se houver, a parcela do caminhão e as licenças, mesmo sem salário. O fechamento não cobra de novo.
+- **Contas fixas pelo calendário**: no dia escolhido de cada semana saem, se houver, a parcela do caminhão e as licenças, mesmo sem salário. O fechamento não cobra de novo.
+- **Aluguel (v0.22)**: a moradia não sai sozinha do saldo. Cada semana do calendário tem um aluguel (Ajustes › Custos de vida › Moradia) que vence no dia das contas fixas; depois desse dia, fica em atraso. O jogador paga na aba Vida, e cada pagamento quita a semana mais antiga em aberto. Ao atualizar uma carreira antiga, as semanas já cobradas contam como pagas. O DRE da semana continua mostrando a moradia como custo; as "Despesas da semana" do fechamento não a incluem.
+- **Extrato detalhado (v0.22)**: cada lançamento guarda a conta que chega no total (holerite: salário, comissão, bônus e cada imposto; despesas: combustível, pedágios, refeições com quantidade × preço, hotel, multas, danos e custos do caminhão; aluguel; viagens de carro). Se as linhas não somam o total, aparece a diferença com o motivo (ex.: contas já cobradas pelo calendário).
 - **Empréstimo**: parcela mensal (30 dias) ou semanal.
   - Juros = saldo × taxa mensal (semanal = taxa × 7/30).
   - Parcela paga = mín(parcela, saldo + juros). Quitado, desliga sozinho.
@@ -67,7 +69,8 @@ Frete do jogo × 0,10, ou milhas × $/mi.
 
 ## Pagamento
 - O holerite (W-2) ou acerto/settlement (1099) deposita o líquido no dia do pagamento.
-- **Pay lag**: início da semana + 7 × semanas de atraso + dia da semana do pagamento (padrão: sexta, 1 semana).
+- **Período do holerite (v0.22)**: vai do início da semana até o dia em que você fecha, no máximo 7 dias. Fechar antes do fim (ex.: na sexta) não muda o dia do jogo: o período novo começa no dia seguinte (sábado), e o que for lançado no fim de semana entra no próximo holerite. A partir daí os períodos seguem de 7 em 7 dias (sábado a sexta). Contas fixas descontadas no fechamento: as cobradas pelo calendário dentro do período.
+- **Pay lag**: semana do calendário em que o período termina + 7 × semanas de atraso + dia da semana do pagamento (padrão: sexta, 1 semana). Fechando na sexta, o holerite cai na sexta seguinte.
 - No fechamento saem do saldo as despesas de viagem, os custos por milha e as contas fixas ainda não cobradas.
 - **Bônus de segurança**: $300 a cada 13 semanas sem multa, dano ou infração de jornada.
 
