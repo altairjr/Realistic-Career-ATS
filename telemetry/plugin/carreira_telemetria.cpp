@@ -44,7 +44,7 @@
 
 #include "scssdk_telemetry.h"
 
-#define PLUGIN_VERSION "0.3.0"
+#define PLUGIN_VERSION "0.3.1"
 #define PLUGIN_TAG "[carreira-telemetria] "
 
 // Exporta as duas funções que o jogo procura, com o nome exato, seja qual for a ligação declarada no SDK.
@@ -162,18 +162,23 @@ void write_line(const std::string &line) {
 	std::fclose(f);
 }
 
-/* --- Canais (valores que mudam a cada instante) --- */
-SCSAPI_VOID on_game_time(const scs_string_t, const scs_u32_t, const scs_value_t *const value, const scs_context_t) {
-	if (!value || value->type != SCS_VALUE_TYPE_u32) return;
-	const scs_u32_t t = value->value_u32.value;
-	// minutos dirigidos: o tempo do jogo andou e o caminhão estava em movimento (saltos grandes = dormir, balsa, trem)
-	if (have_time && job_active && !paused && t > game_time && t - game_time <= 30 && (speed > 1.0f || speed < -1.0f)) drive_minutes += t - game_time;
+// Guarda a hora do jogo e grava um registro "time" quando o dia muda
+void set_game_time(scs_u32_t t) {
 	game_time = t; have_time = true;
 	const long day = static_cast<long>(t / 1440u);
 	if (day != last_day) {
 		last_day = day;
 		write_line("{\"t\":\"time\"" + context_json() + "}");
 	}
+}
+
+/* --- Canais (valores que mudam a cada instante) --- */
+SCSAPI_VOID on_game_time(const scs_string_t, const scs_u32_t, const scs_value_t *const value, const scs_context_t) {
+	if (!value || value->type != SCS_VALUE_TYPE_u32) return;
+	const scs_u32_t t = value->value_u32.value;
+	// minutos dirigidos: o tempo do jogo andou e o caminhão estava em movimento (saltos grandes = dormir, balsa, trem)
+	if (have_time && job_active && !paused && t > game_time && t - game_time <= 30 && (speed > 1.0f || speed < -1.0f)) drive_minutes += t - game_time;
+	set_game_time(t);
 }
 SCSAPI_VOID on_speed(const scs_string_t, const scs_u32_t, const scs_value_t *const value, const scs_context_t) {
 	if (value && value->type == SCS_VALUE_TYPE_float) speed = value->value_float.value;
@@ -220,7 +225,10 @@ int cmd_step = -1;                  // -1 parado; 0 abrir console; 1..n digitar 
 long long cmd_at = 0, next_check = 0, ready_since = 0;
 std::vector<std::string> cmd_console;
 std::string cmd_id = "0";
-unsigned console_scancode = 0x29;   // tecla abaixo do Esc (` no teclado americano, ' no ABNT2)
+unsigned console_scancode = 0x29;
+long long init_ms = 0;              // quando o plugin foi carregado (o jogo carrega o perfil logo antes)
+bool cmd_sets_time = false;         // o comando muda a hora: no fim, a hora calculada vale até o jogo informar a real
+scs_u32_t cmd_final_time = 0;   // tecla abaixo do Esc (` no teclado americano, ' no ABNT2)
 
 bool game_has_focus() {
 #if defined(_WIN32)
@@ -234,7 +242,8 @@ bool game_has_focus() {
 }
 // Pode digitar: jogo em foco e já dentro do perfil (o relógio do jogo chegou). Vale no menu do Esc (pausado)
 // e sem caminhão; dirigindo, espera o caminhão parar para o console não abrir no meio de uma curva.
-bool ready_for_console() { return have_time && game_has_focus() && (paused || (speed < 0.5f && speed > -0.5f)); }
+// Pausado (menu do Esc) o jogo não envia a hora nem a velocidade: vale do mesmo jeito, com a hora base que o programa do PC manda.
+bool ready_for_console() { return now_ms() - init_ms >= 3000 && game_has_focus() && (paused || (speed < 0.5f && speed > -0.5f)); }
 
 // scancode (teclado americano) e se precisa de Shift; 0 = caractere não suportado
 unsigned scan_of(char c, bool &shift) {
@@ -292,11 +301,14 @@ const char *load_commands() {
 	std::fclose(fp);
 	std::istringstream all(text);
 	std::error_code ec; std::filesystem::remove(std::filesystem::u8path(path), ec);
-	cmd_console.clear(); cmd_id = "0";
-	std::string line; scs_u32_t t = game_time;
+	cmd_console.clear(); cmd_id = "0"; cmd_sets_time = false;
+	std::string line; scs_u32_t t = game_time; bool known = have_time;
 	while (std::getline(all, line)) {
 		std::istringstream in(line); std::string op; if (!(in >> op)) continue;
 		if (op == "id") in >> cmd_id;
+		// hora do jogo conhecida pelo programa do PC (última que o jogo informou neste perfil): usada se o jogo
+		// ainda não informou a hora nesta sessão, como no menu do Esc logo depois de carregar o perfil
+		else if (op == "base") { unsigned long b = 0; if (!known && in >> b) { t = static_cast<scs_u32_t>(b); known = true; } }
 		else if (op == "tecla") { unsigned sc = 0; if (in >> sc && sc > 0 && sc < 0x80) console_scancode = sc; }
 		else if (op == "warp") {
 			double w = 0; if (!(in >> w) || !(w >= 0.1 && w <= 10.0)) return "valor de warp inválido";
@@ -305,11 +317,13 @@ const char *load_commands() {
 		else if (op == "hora") {
 			int h = -1, m = -1; if (!(in >> h >> m) || h < 0 || h > 23 || m < 0 || m > 59) return "hora inválida";
 			char b[32]; std::snprintf(b, sizeof b, "g_set_time %d %d", h, m); cmd_console.push_back(b);
-			if (have_time) { const scs_u32_t now_day = t % 1440u, want = static_cast<scs_u32_t>(h * 60 + m); t += want > now_day ? want - now_day : 1440u - now_day + want; }
+			cmd_sets_time = known;
+			if (known) { const scs_u32_t now_day = t % 1440u, want = static_cast<scs_u32_t>(h * 60 + m); t += want > now_day ? want - now_day : 1440u - now_day + want; }
 		}
 		else if (op == "avancar") {
 			long mins = 0; if (!(in >> mins) || mins < 1 || mins > 2880) return "tempo para avançar inválido";
-			if (!have_time) return "o jogo ainda não informou a hora";
+			if (!known) return "hora do jogo desconhecida: dirija um instante para o jogo informar a hora";
+			cmd_sets_time = true;
 			// g_set_time só anda para frente e vai até 24 h: passos de até 12 h
 			while (mins > 0) {
 				const long step = mins > 720 ? 720 : mins; t += static_cast<scs_u32_t>(step); mins -= step;
@@ -317,6 +331,7 @@ const char *load_commands() {
 			}
 		}
 	}
+	cmd_final_time = t;
 	return nullptr;
 }
 
@@ -341,6 +356,7 @@ SCSAPI_VOID on_frame_end(const scs_event_t, const void *const, const scs_context
 	if (cmd_step == 0) { press_console(); cmd_step = 1; cmd_at = t + 350; return; }
 	if (cmd_step <= n) { type_line(cmd_console[cmd_step - 1]); ++cmd_step; cmd_at = t + 250; return; }
 	press_console();
+	if (cmd_sets_time) set_game_time(cmd_final_time);   // o jogo pausado não informa a hora nova; esta vale até ele informar
 	write_cmd_result(true, nullptr);
 	log_msg(("comando no console: " + cmd_console.back()).c_str());
 	cmd_step = -1; ready_since = 0;
@@ -391,6 +407,7 @@ SCSAPI_RESULT scs_telemetry_init(const scs_u32_t version, const scs_telemetry_in
 	const scs_telemetry_init_params_v100_t *const p = static_cast<const scs_telemetry_init_params_v100_t *>(params);
 	game_log = p->common.log;
 	game_id = p->common.game_id ? p->common.game_id : "?";
+	init_ms = now_ms();
 	out_file = output_path();
 	if (out_file.empty()) { log_msg("sem pasta para gravar (LOCALAPPDATA vazio); plugin desligado"); return SCS_RESULT_generic_error; }
 	{ std::error_code ec; std::filesystem::remove(std::filesystem::u8path(out_dir + "/comando.txt"), ec); }   // comando de outra sessão não vale
