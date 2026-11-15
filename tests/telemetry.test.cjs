@@ -187,7 +187,12 @@ test('simulação: warp ao abrir o jogo, tempo de carga após a entrega e avanç
     const logFile = path.join(dir, 'game.log.txt'), cfg = path.join(dir, 'config.cfg'), data = path.join(dir, 'telemetria.jsonl'), CMD = path.join(dir, 'comando.txt'), notes = [];
     const write = recs => fs.appendFileSync(data, recs.map(r => JSON.stringify(r)).join('\n') + '\n');
     // o plugin lê e apaga o arquivo e grava o resultado
-    const plugin = (consoleCmds, real) => { const id = fs.readFileSync(CMD, 'utf8').match(/^id (\d+)/)[1]; fs.rmSync(CMD); write([{ t: 'cmd', id, ok: true, console: consoleCmds, real }]); };
+    // o plugin lê e apaga o arquivo e grava o resultado; echo = o console do jogo repete o comando no game.log
+    const plugin = (consoleCmds, real, echo = true, extra = {}) => {
+      const id = fs.readFileSync(CMD, 'utf8').match(/^id (\d+)/)[1]; fs.rmSync(CMD); write([Object.assign({ t: 'cmd', id, ok: true, console: consoleCmds, real }, extra)]);
+      const d = new Date(real), rel = `00:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}.100`;
+      if (echo) fs.appendFileSync(logFile, consoleCmds.map(c => `\n${rel} : ${c.replace(/ (\d)\b/g, ' 0$1')}`).join(''));
+    };
     fs.writeFileSync(logFile, fakeLog([[0, 10, 'Carreira']]));
     fs.writeFileSync(cfg, 'uset g_console "0"\nuset g_developer "1"\n');
     assert.equal(consoleState(logFile), 'off'); assert.equal(consoleState(null), 'unknown');
@@ -210,8 +215,13 @@ test('simulação: warp ao abrir o jogo, tempo de carga após a entrega e avanç
     assert.equal(m.db.status.get(uid).sim_last.text, 'warp 0.9', 'o app vê o último comando aplicado');
     // pedidos do overlay se juntam enquanto o plugin não lê
     assert.equal(r.advanceTime(240).ok, true); assert.equal(r.advanceTime(60).ok, true);
-    plugin(['g_set_time 15 30'], at(20, 11, 0)); await r.cycle();
+    plugin(['g_set_time 15 30'], at(20, 11, 0), true, { target: 930 }); await r.cycle();
+    assert.equal(m.db.status.get(uid).game_time, 930, 'hora confirmada no game.log vira a hora do jogo no app');
+    assert.match(fs.readFileSync(CMD, 'utf8'), /base 930\n/, 'o próximo avanço parte da hora confirmada');
     assert.match(fs.readFileSync(CMD, 'utf8'), /avancar 300/);
+    // teclas que não chegaram ao console: sem eco no game.log, o comando vira erro (com o relógio do teste andando)
+    plugin(['g_set_time 20 30'], at(20, 11, 10), false, { target: 1230 });
+    await r.cycle(); assert.ok(!notes.some(n => n.type === 'sim' && n.cmd.text === 'hora do jogo 20:30'));
     assert.equal(r.setTime(25, 0).ok, false);
     assert.equal(r.snapshot().simInfo.console, 'ok');
     // console desligado: recusa com o motivo
@@ -238,18 +248,19 @@ test('plugin: digita no console com o caminhão parado ou no menu do Esc, quebra
     execFileSync('g++', ['-std=c++17', '-I', path.join(__dirname, 'telemetry', 'sdk-shim'), '-o', exe, path.join(__dirname, 'telemetry', 'harness.cpp'), path.join(ROOT, 'telemetry', 'plugin', 'carreira_telemetria.cpp')]);
     execFileSync(exe, [path.join(__dirname, 'telemetry', 'sessao-comandos.txt')], { env: { ...process.env, CARREIRA_TELEMETRIA_DIR: dir }, stdio: 'pipe' });
     assert.deepEqual(fs.readFileSync(path.join(dir, 'teclado.txt'), 'utf8').trim().split('\n'),
-      ['<console>', 'warp 0.9', 'g_set_time 15 30', '<console>', '<console>', 'g_set_time 3 30', 'g_set_time 15 30', 'g_set_time 17 30', 'g_set_time 6 30', '<console>', '<console>', 'warp 1', '<console>']);
+      ['<console>', 'warp 0.9', 'g_set_time 15 30', '<console>', '<console>', 'g_set_time 2 30', 'g_set_time 14 30', 'g_set_time 16 30', 'g_set_time 6 30', '<console>', '<console>', 'warp 1', '<console>']);
     const cmds = fs.readFileSync(path.join(dir, 'telemetria.jsonl'), 'utf8').trim().split('\n').map(l => JSON.parse(l)).filter(l => l.t === 'cmd');
     assert.deepEqual(cmds.map(c => [c.id, c.ok]), [['7', true], ['8', false], ['9', true], ['10', true]]);
     assert.match(cmds[1].error, /warp/);
     assert.ok(!fs.existsSync(path.join(dir, 'comando.txt')), 'o plugin apaga o pedido depois de ler');
-    // menu do Esc logo após carregar o perfil: sem hora do jogo, usa a base do programa e grava o novo dia
+    // menu do Esc logo após carregar o perfil: sem hora do jogo, usa a base do programa
     const mdir = tmp();
     execFileSync(exe, [path.join(__dirname, 'telemetry', 'sessao-menu.txt')], { env: { ...process.env, CARREIRA_TELEMETRIA_DIR: mdir }, stdio: 'pipe' });
     assert.deepEqual(fs.readFileSync(path.join(mdir, 'teclado.txt'), 'utf8').trim().split('\n'), ['<console>', 'warp 0.9', 'g_set_time 0 30', '<console>']);
     const recs = fs.readFileSync(path.join(mdir, 'telemetria.jsonl'), 'utf8').trim().split('\n').map(l => JSON.parse(l));
-    assert.equal(recs.find(r => r.t === 'time').gameTime, 1470, 'virou o dia: o app fica sabendo');
-    assert.equal(recs.find(r => r.t === 'cmd').ok, true);
+    const done = recs.find(r => r.t === 'cmd');
+    assert.equal(done.ok, true); assert.equal(done.target, 1470, 'hora pretendida vai no resultado; o programa confirma no game.log');
+    assert.ok(!recs.some(r => r.t === 'time'), 'sem confirmação o plugin não inventa a hora do jogo');
     fs.rmSync(mdir, { recursive: true, force: true });
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
