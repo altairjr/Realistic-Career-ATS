@@ -159,6 +159,7 @@ async function saveSim(patch) {
 }
 
 /* Overlay (app de PC por cima do jogo): relógio do jogo e botões para avançar o tempo */
+let ovHour = null;   // hora escolhida em "Ir para": guardada para a tela não voltar ao padrão a cada atualização
 const hhmm = t => `${String(Math.floor(t / 60) % 24).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
 function overlayClock() {
   const D = window.carreiraDesktop;
@@ -166,7 +167,7 @@ function overlayClock() {
   return `<section class="panel pad ov-clock" id="ovClock">
     <div class="sec-head"><div><div class="eyebrow">Tempo no jogo</div><h2 class="hrow" style="font-size:18px" id="ovClockNow">…</h2></div></div>
     <div class="row">${[1, 2, 4, 8].map(h => `<button class="btn sm" data-act="ov-adv" data-min="${h * 60}">+${h} h</button>`).join('')}</div>
-    <div class="row" style="flex-wrap:nowrap;align-items:end"><div class="field" style="flex:1"><label for="ovH">Ir para</label><input id="ovH" type="time" step="60" value="06:00"></div><button class="btn sm primary" data-act="ov-set">Ir</button></div>
+    <div class="row" style="flex-wrap:nowrap;align-items:end"><div class="field" style="flex:1"><label for="ovH">Ir para</label><input id="ovH" type="time" step="60" value="${ovHour || ''}"></div><button class="btn sm primary" data-act="ov-set">Ir</button></div>
     <div class="muted" style="font-size:12px" id="ovClockMsg">O comando é digitado no console quando você volta ao jogo (no menu do Esc ou parado).</div>
   </section>`;
 }
@@ -175,17 +176,23 @@ async function overlayClockTick() {
   try {
     const c = await window.carreiraDesktop.gameClock(), msg = document.getElementById('ovClockMsg');
     el.textContent = c.online && typeof c.gameTime === 'number' ? `Dia ${Math.floor(c.gameTime / 1440) + 1} · ${hhmm(c.gameTime)}` : 'Jogo fechado';
+    // primeira vez: sugere a próxima hora cheia do jogo
+    const inp = document.getElementById('ovH');
+    if (inp && !ovHour && typeof c.gameTime === 'number' && document.activeElement !== inp) { ovHour = hhmm(Math.ceil((c.gameTime + 1) / 60) * 60); inp.value = ovHour; }
     if (msg && c.sim) msg.textContent = c.sim.why ? `Parado: ${c.sim.why}.` : c.sim.pending ? 'Pedido na fila: volte ao jogo (menu do Esc ou parado).' : c.sim.last ? `${c.sim.last.ok ? 'Aplicado' : 'Erro'}: ${c.sim.last.text}` : 'O comando é digitado no console quando você volta ao jogo (no menu do Esc ou parado).';
   } catch (e) {}
 }
-if (window.carreiraDesktop && window.carreiraDesktop.gameClock) setInterval(overlayClockTick, 2000);
+if (window.carreiraDesktop && window.carreiraDesktop.gameClock) {
+  setInterval(overlayClockTick, 2000);
+  document.addEventListener('input', e => { if (e.target && e.target.id === 'ovH') ovHour = e.target.value || null; });
+}
 
 async function telemetryControlAction(a, el) {
   if (a === 'ov-adv' || a === 'ov-set') {
     const D = window.carreiraDesktop; if (!D) return true;
     let r;
     if (a === 'ov-adv') r = await D.advanceTime(+el.dataset.min);
-    else { const v = (document.getElementById('ovH').value || '').split(':'); r = await D.setTime(+v[0], +v[1]); }
+    else { const raw = document.getElementById('ovH').value || ''; if (!raw) return toast('Escolha a hora.'), true; ovHour = raw; const v = raw.split(':'); r = await D.setTime(+v[0], +v[1]); }
     toast(r && r.ok ? (a === 'ov-adv' ? `Avançar ${+el.dataset.min / 60} h: na fila` : 'Hora na fila') + ' — volte ao jogo' : (r && r.error) || 'Não deu certo.');
     overlayClockTick(); return true;
   }
