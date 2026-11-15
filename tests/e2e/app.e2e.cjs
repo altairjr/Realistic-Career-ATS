@@ -112,7 +112,12 @@ test('telas: todas as abas sem rolagem lateral e sem erros, no celular e no PC',
       assert.ok(await overflow(page) <= 0, `${t} em ${vp.width}px tem rolagem lateral`);
     }
     // os 8 nomes das abas cabem sem cortar
-    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('nav.tabs button')].filter(b => b.scrollWidth > b.clientWidth + 1).map(b => b.dataset.tab)), [], `nomes de abas cortados em ${vp.width}px`);
+    const clipped = () => page.evaluate(() => [...document.querySelectorAll('nav.tabs button')].filter(b => b.scrollWidth > b.clientWidth + 1).map(b => b.dataset.tab));
+    assert.deepEqual(await clipped(), [], `nomes de abas cortados em ${vp.width}px`);
+    // sem a fonte do Google (offline ou bloqueada), com uma fonte reserva larga, os nomes também cabem
+    const wide = await page.addStyleTag({ content: 'nav.tabs button{font-family:"DejaVu Sans",Verdana,sans-serif !important}' });
+    assert.deepEqual(await clipped(), [], `nomes de abas cortados em ${vp.width}px com fonte larga`);
+    await wide.evaluate(el => el.remove());
     await page.click('[data-tab="diario"]'); await page.locator('[data-edit]').first().click();
     await page.waitForSelector('#modalRoot .sheet');
     assert.ok(await overflow(page) <= 0, `formulário de viagem em ${vp.width}px tem rolagem lateral`);
