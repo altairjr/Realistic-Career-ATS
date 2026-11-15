@@ -29,7 +29,6 @@
 #include <filesystem>
 #include <chrono>
 #include <vector>
-#include <fstream>
 #include <sstream>
 
 #if defined(_WIN32)
@@ -40,6 +39,7 @@
 #  include <windows.h>
 #  include <shellapi.h>
 #  pragma comment(lib, "shell32.lib")
+#  pragma comment(lib, "user32.lib")   // SendInput, GetForegroundWindow (comandos no console)
 #endif
 
 #include "scssdk_telemetry.h"
@@ -283,9 +283,12 @@ void write_cmd_result(bool ok, const char *error) {
 // Lê comando.txt e traduz para comandos do console. Retorna mensagem de erro ou nullptr.
 const char *load_commands() {
 	const std::string path = out_dir + "/comando.txt";
-	std::ifstream f(std::filesystem::u8path(path));
-	if (!f) return "";
-	std::stringstream all; all << f.rdbuf(); f.close();
+	FILE *fp = std::fopen(path.c_str(), "rb");
+	if (!fp) return "";
+	std::string text; char buf[512]; size_t n;
+	while ((n = std::fread(buf, 1, sizeof buf, fp)) > 0) text.append(buf, n);
+	std::fclose(fp);
+	std::istringstream all(text);
 	std::error_code ec; std::filesystem::remove(std::filesystem::u8path(path), ec);
 	cmd_console.clear(); cmd_id = "0";
 	std::string line; scs_u32_t t = game_time;
