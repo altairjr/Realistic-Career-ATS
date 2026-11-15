@@ -1,4 +1,4 @@
-# Roadmap — onde estamos (v0.19, nov/2026)
+# Roadmap — onde estamos (v0.20, nov/2026)
 
 | Fase | Objetivo | Status |
 |---|---|---|
@@ -6,8 +6,8 @@
 | 1 | App em HTML | ✅ Concluída |
 | 1b | Revisão para escalar (código, dados, regras dos EUA) | ✅ Concluída |
 | 2 | Celular + sincronização | ✅ Concluída (site publicado, app instalável, login e sincronização) |
-| 3 | Integração com o jogo (telemetria) | 🟡 Implementada; falta o primeiro teste no jogo de verdade |
-| 4 | Overlay sobre o jogo | ⬜ Não iniciada |
+| 3 | Integração com o jogo (telemetria) | ✅ Funcionando no jogo (falta testar multa, pedágio e cancelamento) |
+| 4 | Overlay sobre o jogo | 🟡 Feito no app de PC (v0.20); falta testar no Windows |
 | 5 | Carreira avançada | 🟡 Boa parte entregue |
 
 ## Etapas concluídas
@@ -82,18 +82,27 @@
 - **Testes**: sessão de jogo simulada compilada com o plugin → companheiro → servidor de teste; 40 testes automáticos e 6 no navegador.
 - Guia de instalação e limites em `telemetria.md`.
 
+### App de PC, controle da coleta e overlay (v0.20, esta versão)
+- **App de PC "Carreira Realista"** (Electron): instalador `CarreiraRealista-Setup.exe` publicado em Release com link fixo; instala e confere o plugin pela Steam; ícone na bandeja com status (verde/amarelo/vermelho); painel com cada item e o botão para resolver; avisos a cada entrega; abrir junto com o jogo e iniciar com o Windows.
+- **Coleta controlável**: pausar (o plugin para de gravar) e **perfil do jogo ligado à carreira** (lido no `game.log.txt`); outros perfis não enviam nada. Controle no PC e no app (*Ajustes › Telemetria do jogo*).
+- **Overlay (fase 4)**: o app por cima do jogo com Ctrl+Shift+Espaço, modo compacto, arrastável.
+- **Plugin 0.2**: arquivo de pausa e abertura do programa com o jogo.
+- **Testes**: 44 automáticos (perfil, pausa, controle pela conta, instalador) e 11 no navegador (painel do PC, telemetria no app, overlay).
+
 ### Fase 5 — parte já feita
 - 5 classificações com predefinições; fixo, hora, CPM e percentual; jornada FMCSA; empréstimo; renome; bônus de segurança; experiência e CPM sugerido; status migratório; custos de owner-operator.
 
 ## Etapas que faltam
 ### Fase 3 — o que falta
-- **Primeiro teste no jogo de verdade**: compilar a DLL no GitHub, instalar, jogar uma entrega com `--diagnostico` e conferir nomes e valores.
+- ~~Primeiro teste no jogo~~: feito em 14/11 (ATS 1.62.2.2s), entrega chegou à conta. Falta ver multa, pedágio, balsa, abastecimento e cancelamento num jogo real.
 - Valor do combustível (o SDK dá litros; falta o preço pago).
 - Programa companheiro com ícone e início automático (hoje é uma janela de terminal); depois, junto com o overlay da fase 4.
 - 10h de folga entre turnos e restart de 34h exatos usando o relógio do jogo.
 
-### Fase 4 — Overlay
-- Janela transparente sempre por cima, por atalho de teclado, com o jogo em "janela sem borda".
+### Fase 4 — Overlay (restante)
+- Testar no Windows: atalho, janela por cima do jogo em tela cheia sem borda, login dentro do overlay.
+- Ajustes finos de tamanho, transparência e posição conforme o uso.
+- Atualização automática do app de PC (hoje: baixar a versão nova no mesmo link).
 
 ### Fase 5 — restante
 - Folga em casa (home time) para OTR.
@@ -106,9 +115,9 @@
 - **ETS2**: o nome do projeto já prevê o Euro Truck Simulator 2. Exige outro conjunto de regras (euro, tacógrafo da UE, impostos europeus), aproveitando o mesmo motor e a mesma telemetria.
 
 ## Próxima etapa de implementação
-**Teste da telemetria no jogo (fase 3, validação):**
-1. Rodar o workflow `telemetria` no GitHub e baixar a DLL.
-2. Instalar no ATS, abrir o programa companheiro com `--diagnostico` e fazer uma entrega.
-3. Conferir no app o cartão "No jogo agora" e o rascunho; ajustar `core.mjs` se algum nome do SDK vier diferente.
+**Primeiro teste do app de PC no Windows:**
+1. Salvar o workflow `desktop.yml`, rodar (*Actions › desktop › Run workflow*) e baixar `CarreiraRealista-Setup.exe` pela Release.
+2. Instalar, deixar o programa instalar o plugin, entrar na conta e jogar uma entrega com pedágio e abastecimento.
+3. Conferir bandeja, avisos, pausa, perfil ligado e o overlay (Ctrl+Shift+Espaço) com o jogo em tela cheia sem borda.
 
-Depois: **Fase 4 — overlay** (janela por cima do jogo), que também substitui a janela de terminal do programa companheiro.
+Depois: **Fase 5 — carreira avançada** (folga em casa, progressão, caminhão próprio, documentos do motorista, eventos).

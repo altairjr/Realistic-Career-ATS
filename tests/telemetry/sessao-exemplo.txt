@@ -1,12 +1,14 @@
 # Sessão de jogo simulada: abre o jogo, pega um trabalho em Reno, paga pedágio, leva multa, dorme, entrega em Elko.
 init 1.01
-odo 15000
 time 2870
 pause 0
 truck s:brand=Kenworth s:name=T680 f:fuel.capacity=567
 job s:cargo=Madeira+serrada s:cargo.id=lumber s:source.city=Reno s:source.company=Sierra s:destination.city=Elko s:destination.company=Plaster+Corp u64:income=3100 u32:planned_distance.km=470 f:cargo.mass=18000 u32:delivery.time=4300 s:job.market=freight_market b:special.job=0
+odo 15000
 speed 25
 time 2871
+time 2871
+odo 15000
 time 2875
 event player.tollgate.paid s64:pay.amount=12
 time 2890

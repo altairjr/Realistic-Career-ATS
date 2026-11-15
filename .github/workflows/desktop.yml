@@ -1,0 +1,61 @@
+# Gera o instalador do app de PC (CarreiraRealista-Setup.exe), com o plugin de telemetria dentro, e publica uma Release.
+# Link fixo para baixar sempre a última versão:
+#   https://github.com/altairjr/Realistic-Career-ATS/releases/latest/download/CarreiraRealista-Setup.exe
+# Roda pelo botão "Run workflow" (aba Actions) ou ao enviar uma tag v* (ex.: v0.20.0).
+name: desktop
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  instalador:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Testes
+        run: npm test
+      - name: Baixar o SDK oficial da SCS (1.16)
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://download.eurotrucksimulator2.com/scs_sdk_1_16.zip -OutFile sdk.zip
+          Expand-Archive sdk.zip -DestinationPath sdk
+          $h = Get-ChildItem sdk -Recurse -Filter scssdk_telemetry.h | Select-Object -First 1
+          if (-not $h) { throw 'scssdk_telemetry.h não encontrado no SDK' }
+          "SDK_INC=$($h.DirectoryName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Compilar o plugin (DLL 64 bits)
+        shell: cmd
+        run: |
+          for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do set VS=%%i
+          call "%VS%\VC\Auxiliary\Build\vcvars64.bat" || exit /b 1
+          mkdir obj
+          cl /nologo /std:c++17 /O2 /EHsc /MT /LD /utf-8 /W3 /I "%SDK_INC%" telemetry\plugin\carreira_telemetria.cpp /Fo:obj\ /Fe:desktop\resources\carreira-telemetria.dll || exit /b 1
+          dumpbin /exports desktop\resources\carreira-telemetria.dll | findstr /c:"scs_telemetry_init" || exit /b 1
+      - name: Preparar e empacotar o app de PC
+        shell: pwsh
+        run: |
+          node desktop/preparar.mjs
+          cd desktop
+          npm install --no-audit --no-fund
+          npm run dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: carreira-realista-instalador
+          path: |
+            desktop/dist/CarreiraRealista-Setup.exe
+            desktop/resources/carreira-telemetria.dll
+      - name: Publicar Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $v = (Get-Content package.json | ConvertFrom-Json).version
+          $tag = "v$v"
+          $files = @('desktop/dist/CarreiraRealista-Setup.exe', 'desktop/resources/carreira-telemetria.dll')
+          gh release view $tag 2>$null
+          if ($LASTEXITCODE -eq 0) { gh release upload $tag @files --clobber }
+          else { gh release create $tag @files --title "Carreira Realista $v" --notes "Instalador do app de PC (telemetria do jogo, bandeja e app por cima do jogo). Baixe CarreiraRealista-Setup.exe e abra." --latest }

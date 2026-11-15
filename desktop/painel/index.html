@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+<title>Carreira Realista</title>
+<style>
+:root{--bg:#0e1311;--panel:#161d1a;--panel-2:#1c2521;--ink:#e4ebe7;--muted:#92a39a;--line:#28332e;--ok:#4cc386;--wait:#e3a92b;--off:#ef7a70;--sign:#14824b;color-scheme:dark}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+header{background:var(--sign);padding:14px 16px;display:flex;gap:12px;align-items:center}
+header img{width:36px;height:36px;border-radius:8px} header h1{margin:0;font-size:17px;letter-spacing:.02em} header small{opacity:.85;display:block}
+main{padding:14px 16px 20px;display:flex;flex-direction:column;gap:12px}
+.hero{display:flex;gap:10px;align-items:center;padding:12px 14px;border-radius:10px;background:var(--panel);border:1px solid var(--line)}
+.dot{width:12px;height:12px;border-radius:50%;flex:none} .ok{background:var(--ok)} .wait{background:var(--wait)} .off{background:var(--off)}
+.hero b{font-size:15px}
+section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+section h2{margin:0;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.check{display:flex;gap:8px;align-items:flex-start} .check .dot{margin-top:4px;width:10px;height:10px} .check small{display:block;color:var(--muted)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{font:inherit;font-weight:600;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);padding:7px 12px;cursor:pointer}
+button.primary{background:var(--sign);border-color:var(--sign)} button.danger{color:var(--off)} button:disabled{opacity:.5;cursor:default}
+input,select{font:inherit;background:var(--panel-2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 10px;width:100%}
+label.opt{display:flex;gap:8px;align-items:center} label.opt input{width:auto}
+.field{display:flex;flex-direction:column;gap:4px} .field span{font-size:12.5px;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)} .log{font:12px/1.5 Consolas,monospace;color:var(--muted);max-height:160px;overflow:auto;white-space:pre-wrap}
+.warn{color:var(--wait)} [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header><img src="../icons/app.png" alt=""><div><h1>Carreira Realista</h1><small id="ver">telemetria do jogo</small></div></header>
+<main>
+  <div class="hero"><span class="dot" id="heroDot"></span><div><b id="headline">Carregando…</b><div class="muted" id="subline"></div></div></div>
+
+  <section id="secConta"><h2>Conta</h2>
+    <div id="logged" hidden class="row" style="justify-content:space-between"><span>Conectado como <b id="email"></b></span><button id="btnSair">Sair</button></div>
+    <form id="loginForm" hidden style="display:flex;flex-direction:column;gap:8px">
+      <div class="muted">Entre com a mesma conta do app. A senha não é gravada.</div>
+      <label class="field"><span>E-mail</span><input id="inEmail" type="email" autocomplete="username"></label>
+      <label class="field"><span>Senha</span><input id="inPass" type="password" autocomplete="current-password"></label>
+      <div class="row"><button class="primary" type="submit">Entrar</button><span class="warn" id="loginErr"></span></div>
+    </form>
+  </section>
+
+  <section><h2>Jogo e plugin</h2><div id="checks"></div><div class="row" id="pluginBtns"></div></section>
+
+  <section><h2>Coleta</h2>
+    <label class="opt"><input type="checkbox" id="collect"> <span>Coleta ligada <small class="muted">(desligada: o plugin não grava e nada vai para o app)</small></span></label>
+    <div id="profileBox"></div>
+  </section>
+
+  <section><h2>Agora</h2><div id="now" class="muted"></div></section>
+
+  <section><h2>App por cima do jogo</h2>
+    <div class="muted">Abre o app numa janela sempre por cima do jogo. Funciona com o jogo em janela ou em tela cheia sem borda.</div>
+    <div class="row"><button id="btnOverlay" class="primary">Mostrar/ocultar</button><span class="muted">Atalho: <b id="hk"></b></span></div>
+  </section>
+
+  <section><h2>Opções</h2>
+    <label class="opt"><input type="checkbox" id="optGame"> Abrir este programa junto com o jogo</label>
+    <label class="opt"><input type="checkbox" id="optWin"> Iniciar com o Windows (fica só na bandeja)</label>
+    <label class="field"><span>Atalho do app por cima do jogo</span><input id="optHotkey" placeholder="Control+Shift+Space"></label>
+    <label class="field"><span>Jogo</span><select id="optJogo"><option value="ats">American Truck Simulator</option><option value="ets2">Euro Truck Simulator 2</option></select></label>
+    <div class="row"><button id="btnApp">Abrir o app no navegador</button><button id="btnPasta">Abrir pasta de dados</button></div>
+  </section>
+
+  <section><h2>Últimas mensagens</h2><div class="log" id="log"></div></section>
+</main>
+<script src="painel.js"></script>
+</body>
+</html>

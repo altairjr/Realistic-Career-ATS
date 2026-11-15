@@ -1,12 +1,12 @@
 {
   "name": "carreira-realista-ats",
-  "version": "0.19.0",
+  "version": "0.20.0",
   "description": "Sistema de carreira realista para American Truck Simulator: diário de bordo, contratos, DRE semanal, holerite com pay lag e regras do mercado americano (2026).",
   "private": true,
   "scripts": {
     "build": "node build.mjs",
     "test": "node --test tests/engine.test.cjs tests/state.test.cjs tests/sync.test.cjs tests/telemetry.test.cjs",
-    "test:e2e": "node build.mjs && node --test tests/e2e/app.e2e.cjs",
+    "test:e2e": "node build.mjs && node --test tests/e2e/app.e2e.cjs tests/e2e/painel.e2e.cjs",
     "e2e:instalar": "npm install --no-save playwright@1.63.0 && npx playwright install chromium",
     "telemetria": "node telemetry/companion/companion.mjs"
   },

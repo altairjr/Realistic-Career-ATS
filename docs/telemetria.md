@@ -1,4 +1,4 @@
-# Telemetria do jogo — v0.19
+# Telemetria do jogo — v0.20
 
 A telemetria lê o jogo enquanto você joga e leva para o app:
 - **o dia atual do jogo**, que o app pode seguir sozinho;
@@ -15,13 +15,33 @@ ATS ── plugin (DLL dentro do jogo) ──> telemetria.jsonl ──> programa
 
 Nada entra na carreira sem você confirmar: cada entrega abre o formulário de viagem já preenchido.
 
-## Instalação (uma vez)
-1. **Baixar a DLL**: no GitHub, aba **Actions** › workflow **telemetria** › última execução com ✅ › em *Artifacts*, baixe **carreira-telemetria-dll** e descompacte. (Se não houver execução, clique em **Run workflow**.)
-2. **Copiar para o jogo**: na Steam, clique com o direito em American Truck Simulator › *Gerenciar* › *Ver arquivos locais*. Abra `bin\win_x64`, crie a pasta `plugins` (se não existir) e copie `carreira-telemetria.dll` para dentro dela.
-3. **Abrir o jogo**: ao carregar um plugin, o ATS pode mostrar um aviso sobre recursos avançados do SDK. Confirme com OK.
-4. **Rodar o programa companheiro**: na pasta do projeto, `npm run telemetria`. Na primeira vez, ele pede o e-mail e a senha da sua conta (os mesmos do app). Deixe a janela aberta enquanto joga.
+## Instalação (uma vez) — app de PC
+1. **Baixar**: no app, *Ajustes › Telemetria do jogo › Baixar o Carreira Realista para PC*, ou o link fixo
+   `https://github.com/altairjr/Realistic-Career-ATS/releases/latest/download/CarreiraRealista-Setup.exe`.
+2. **Instalar**: abra o arquivo. Como o programa não tem assinatura digital paga, o Windows mostra "O Windows protegeu o computador": clique em *Mais informações › Executar assim mesmo*.
+3. **Primeira vez**: o programa acha o ATS pela Steam e oferece instalar o plugin na pasta certa (`bin\win_x64\plugins`), avisando se houver cópia numa pasta que o jogo não lê. O jogo precisa estar fechado.
+4. **Entrar na conta**: no painel do programa, com o mesmo e-mail e senha do app.
 
-Requisitos: Windows 64 bits, ATS atualizado (os eventos de entrega existem desde a versão 1.01 da telemetria; o programa avisa se o jogo não enviar) e Node.js 18+ para o programa companheiro.
+Depois disso é só jogar: com a opção **Abrir este programa junto com o jogo** (ligada por padrão), o plugin abre o programa quando o ATS inicia. Ele fica como ícone na bandeja, perto do relógio.
+
+### Ícone na bandeja
+- **Verde**: tudo funcionando. **Amarelo**: coleta pausada, perfil não ligado, sem internet ou esperando o jogo. **Vermelho**: falta login ou plugin.
+- Clique para abrir o painel, que mostra cada item (jogo encontrado, plugin instalado e atualizado, plugin carregado pelo jogo segundo o `game.log.txt`, jogo aberto, conta) e o botão para resolver o que faltar.
+- Menu: mostrar o app por cima do jogo, ligar ou pausar a coleta, ver o perfil ligado, sair.
+- A cada entrega enviada aparece um aviso do Windows.
+
+### Coleta e perfis
+- **Coleta ligada/pausada** (bandeja, painel ou app em *Ajustes › Telemetria do jogo*): pausada, o plugin não grava nada e nada é enviado. A pausa feita no app chega ao PC em poucos segundos.
+- **Perfil ligado à carreira**: o programa lê no `game.log.txt` qual perfil o jogo carregou. O primeiro perfil em que você joga fica ligado sozinho; em outro perfil, nada vai para o app (nem entrega, nem dia, nem trabalho) e o aviso "perfil não ligado" aparece. Troque o perfil ligado no painel do PC ou no app.
+- **Remover plugin do jogo**: no painel do PC, com o jogo fechado.
+
+### App por cima do jogo (overlay)
+- Atalho **Ctrl+Shift+Espaço** (pode trocar no painel): abre o app numa janela sempre por cima do jogo, em modo compacto, para lançar e revisar viagens sem Alt+Tab. O × ou o mesmo atalho escondem.
+- Arraste pelo cabeçalho verde; o tamanho e a posição ficam guardados. Na primeira vez, entre na conta dentro da janela.
+- Funciona com o jogo **em janela ou em tela cheia sem borda**. Em tela cheia exclusiva, o Windows não deixa outra janela ficar por cima.
+
+### Sem o app de PC (alternativa)
+A DLL também é publicada na Release e no workflow `telemetria`; copie para `bin\win_x64\plugins` (exatamente `plugins`, minúsculo, com "s"; uma pasta `Plugin` criada por outros mods é ignorada). Depois rode `npm run telemetria` na pasta do projeto (Node.js 18+). Opções: `-- --diagnostico`, `-- --pausar`, `-- --retomar`, `-- --sair`.
 
 ## No app
 - **Cartão "No jogo agora"** (Painel): dia do jogo, caminhão e trabalho em andamento. Aparece quando há dados dos últimos 3 dias.
@@ -46,7 +66,14 @@ Combustível: o SDK informa os litros abastecidos, não o valor pago. Por enquan
 - `npm run telemetria -- --diagnostico` mostra cada registro do jogo como veio do plugin. Use na primeira sessão para conferir os nomes e valores.
 - Arquivos em `%LOCALAPPDATA%\CarreiraRealistaATS`: `telemetria.jsonl` (plugin), `companheiro.json` (posição de leitura e fila de envio), `sessao.json` (login deste PC; a senha não é gravada). Para sair da conta neste PC: `npm run telemetria -- --sair`.
 - Sem internet, as entregas ficam guardadas e são enviadas quando a conexão voltar. Rodar de novo nunca duplica entregas.
-- O log do jogo (`Documentos\American Truck Simulator\game.log.txt`) mostra `[carreira-telemetria] ativo, gravando em ...` quando o plugin carregou.
+- O log do jogo (`Documentos\American Truck Simulator\game.log.txt`) mostra `loading 'carreira-telemetria'` e `[carreira-telemetria] ativo, gravando em ...` quando o plugin carregou. Se essas linhas não aparecem, a DLL não está em `bin\win_x64\plugins`.
+
+## Primeiro teste no jogo (14/11/2026, ATS 1.62.2.2s)
+- Plugin carregado ao lado do TruckyTelemetry, sem conflito.
+- Entrega rápida (quick job) ADM → XPO Logistics, Carson City: frete $351, 3 km (1,9 mi), 18 XP, 10 min de jogo, 0% de dano; dia 19 do jogo; caminhão Kenworth W900. O rascunho chegou à conta com esses valores.
+- Nomes confirmados no jogo: `job.delivered` com `revenue`, `earned.xp`, `cargo.damage`, `distance.km`, `delivery.time`, `auto.park.used`, `auto.load.used`; trabalho com `source.city`, `destination.city`, `cargo`, `income`, `planned_distance.km`, `delivery.time`, `job.market`, `is.special.job`.
+- Corrigido na versão 0.1.1 do plugin: odômetro e relógio do jogo passam a ser lidos a cada quadro (antes só chegavam quando mudavam, e o início do trabalho ficava sem odômetro).
+- Ainda não testados no jogo: multa, pedágio, balsa, trem, abastecimento e trabalho cancelado.
 
 ## Limites conhecidos
 - Feito para o modo um jogador. Em comboio (Convoy), o dia do jogo pode diferir.
@@ -103,5 +130,8 @@ Pergunta e-mail, senha e os dados de uma entrega, entra na sua conta e cria o ra
 Uma linha por usuário, gravada pelo programa companheiro: `game` (`ats`/`ets2`), `online`, `game_time` (minutos desde o início do perfil), `truck` e `job` (`cargo`, `origin`, `dest`, `plannedMiles`, `income`, `deadline`).
 
 ## Para quem for mexer no código
+- `telemetry/companion/runner.mjs` é o núcleo do programa do PC (leitura, filtro de perfil, pausa, envio); `gamelog.mjs` lê o perfil no `game.log.txt`; `install.mjs` acha o jogo pela Steam e instala a DLL. Usados pelo `companion.mjs` (terminal) e pelo app de PC (`desktop/`, Electron).
+- O instalador e a Release são gerados pelo workflow `desktop` (compila a DLL, roda `desktop/preparar.mjs`, empacota com o electron-builder e publica).
+- Controle pela pasta de dados: `pausado.flag` (plugin não grava), `abrir-com-jogo.txt` (caminho do programa que o plugin abre), `app.vivo` (o programa está aberto), `controle.json` (coleta e perfil ligado, cópia local).
 - O plugin não interpreta nada: grava todos os atributos de cada evento. A interpretação fica em `telemetry/companion/core.mjs` (funções puras, testadas em `tests/telemetry.test.cjs`). Se o SDK mudar algum nome, ajuste lá, sem recompilar a DLL.
 - A DLL é compilada pelo GitHub (`.github/workflows/telemetria.yml`) com o SDK oficial 1.16 da SCS. Para os testes fora do Windows, `tests/telemetry/` tem cabeçalhos de simulação do SDK e um programa que imita o jogo (`harness.cpp` + `sessao-exemplo.txt`).

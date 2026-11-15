@@ -169,6 +169,7 @@ function ajustes() {
     `Dia 1 = ${E.WEEKDAYS_FULL[s.day1Weekday].toLowerCase()} · ${s.cities.length} cidades`)}
   ${mod('Tipos de operação', 'Opções de "Especificação da operação" nos contratos.', null,
     listEditor('operation', 'Especificação da operação', 'Ex.: Dedicated Regional'), s.lists.operation.join(' · '))}
+  ${mod('Telemetria do jogo', 'Programa do PC, plugin, coleta e perfil do jogo ligado à carreira.', null, telemetryBlock(), telemetrySummary())}
   ${mod('Dados e sincronização', 'Conta, instalação do app, planilha e backup.', null,
     `${accountBlock()}${installBlock()}
      ${(L => `<div class="full">${L.row}${L.box}</div>`)(labRow('data.sheet', 'Planilha (.xlsx)'))}

@@ -1,0 +1,11 @@
+{"t":"start","plugin":"0.1.0","game":"ats","gameName":"American Truck Simulator 1.62.2.2s","gameVersion":"1.8","gameplayEvents":true,"real":"2026-11-14T23:29:36Z"}
+{"t":"job","attrs":{},"jobOdometerStart":null,"gameTime":null,"odometer":null,"real":"2026-11-14T23:29:36Z"}
+{"t":"truck","attrs":{},"gameTime":null,"odometer":null,"real":"2026-11-14T23:29:36Z"}
+{"t":"job","attrs":{},"jobOdometerStart":null,"gameTime":null,"odometer":null,"real":"2026-11-14T23:29:50Z"}
+{"t":"job","attrs":{},"jobOdometerStart":null,"gameTime":null,"odometer":null,"real":"2026-11-14T23:30:44Z"}
+{"t":"job","attrs":{"cargo.id":"cattle_equip","cargo":"Equipamento para gado","cargo.mass":1360.8,"cargo.unit.mass":272.16,"cargo.unit.count":5,"destination.company.id":"sb_whs","destination.company":"XPO Logistics","source.company.id":"sc_frm_grg","source.company":"ADM","destination.city.id":"carson_city","destination.city":"Carson City","source.city.id":"carson_city","source.city":"Carson City","income":351,"delivery.time":26496,"planned_distance.km":2,"cargo.loaded":true,"job.market":"quick_job","is.special.job":false},"jobOdometerStart":null,"gameTime":null,"odometer":null,"real":"2026-11-14T23:31:12Z"}
+{"t":"truck","attrs":{"brand_id":"kenworth","brand":"Kenworth","id":"vehicle.kenworth.w900","name":"W900","license.plate":"XXXXX","license.plate.country.id":"XXXXX","license.plate.country":"XXXXX"},"gameTime":null,"odometer":null,"real":"2026-11-14T23:31:12Z"}
+{"t":"time","gameTime":26307,"odometer":null,"real":"2026-11-14T23:31:14Z"}
+{"t":"event","id":"job.delivered","attrs":{"revenue":351,"earned.xp":18,"cargo.damage":0,"distance.km":3,"delivery.time":10,"auto.park.used":false,"auto.load.used":true},"driveMinutes":6,"jobOdometerStart":null,"gameTime":26317,"odometer":322645,"real":"2026-11-14T23:34:55Z"}
+{"t":"job","attrs":{},"jobOdometerStart":null,"gameTime":26317,"odometer":322645,"real":"2026-11-14T23:34:57Z"}
+{"t":"truck","attrs":{},"gameTime":26317,"odometer":322645,"real":"2026-11-14T23:34:57Z"}

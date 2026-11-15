@@ -287,7 +287,7 @@ async function refreshDrafts() {
   catch (e) { if (e.code === 'setup') { cloud.draftsOff = true; cloud.drafts = []; } else return; }
   // situação atual do jogo (gravada pelo programa companheiro da telemetria)
   if (!cloud.gameOff && cloud.session && store.backend === cloudBackend) {
-    try { const r = await cloudRest('game_status?select=game,online,game_time,job,truck,updated_at&' + meQ()); cloud.game = r && r[0] ? r[0] : null; }
+    try { const r = await cloudRest('game_status?select=game,online,game_time,job,truck,updated_at,collect,linked_profile,profile,blocked,pc_seen_at,plugin,game_version,last_delivery&' + meQ()); cloud.game = r && r[0] ? r[0] : null; }
     catch (e) { if (e.code === 'setup') { cloud.gameOff = true; cloud.game = null; } }
   }
   if (typeof onGameStatus === 'function') onGameStatus();
@@ -297,4 +297,10 @@ async function resolveDraft(id, status, tripId) {
   const q = draftQ(); q[id] = { status, tripId: tripId || null }; lsSet(DRAFTQ_LS, q);
   cloud.drafts = cloud.drafts.filter(d => d.id !== id);
   try { await cloudDrafts(); } catch (e) {}   // sem conexão: fica na fila e vai na próxima verificação
+}
+
+// Controle da telemetria feito no app (coleta, perfil ligado): só estas colunas mudam; o programa do PC obedece na próxima volta
+async function setGameControl(patch) {
+  await cloudRest('game_status?on_conflict=user_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: Object.assign({ user_id: cloud.session.user.id }, patch) });
+  cloud.game = Object.assign({}, cloud.game || {}, patch);
 }

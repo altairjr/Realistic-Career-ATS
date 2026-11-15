@@ -48,6 +48,15 @@ create table if not exists public.game_status (
   truck      text,
   updated_at timestamptz not null default now()
 );
+-- Controle da telemetria (v0.20): coleta ligada, perfil do jogo ligado à carreira e sinal de vida do programa do PC
+alter table public.game_status add column if not exists collect        boolean not null default true;
+alter table public.game_status add column if not exists linked_profile text;
+alter table public.game_status add column if not exists profile        text;
+alter table public.game_status add column if not exists blocked        text;
+alter table public.game_status add column if not exists pc_seen_at     timestamptz;
+alter table public.game_status add column if not exists plugin         text;
+alter table public.game_status add column if not exists game_version   text;
+alter table public.game_status add column if not exists last_delivery  jsonb;
 
 -- Limites de tamanho: impedem que alguém use o banco para guardar arquivos grandes.
 alter table public.careers      drop constraint if exists careers_tamanho;
@@ -55,7 +64,9 @@ alter table public.careers      add  constraint careers_tamanho check (pg_column
 alter table public.career_weeks drop constraint if exists career_weeks_tamanho;
 alter table public.career_weeks add  constraint career_weeks_tamanho check (pg_column_size(data) < 500000 and length(week_id) <= 64);
 alter table public.game_status  drop constraint if exists game_status_regras;
-alter table public.game_status  add  constraint game_status_regras check (pg_column_size(job) < 5000 and game in ('ats', 'ets2') and (truck is null or length(truck) <= 120));
+alter table public.game_status  add  constraint game_status_regras check (pg_column_size(job) < 5000 and game in ('ats', 'ets2') and (truck is null or length(truck) <= 120)
+  and coalesce(length(linked_profile), 0) <= 120 and coalesce(length(profile), 0) <= 120 and (blocked is null or blocked in ('paused', 'profile'))
+  and coalesce(length(plugin), 0) <= 20 and coalesce(length(game_version), 0) <= 40 and coalesce(pg_column_size(last_delivery), 0) < 2000);
 alter table public.trip_drafts  drop constraint if exists trip_drafts_regras;
 alter table public.trip_drafts  add  constraint trip_drafts_regras check (
   pg_column_size(data) < 20000 and length(event_id) <= 128 and length(source) <= 40 and game in ('ats', 'ets2')

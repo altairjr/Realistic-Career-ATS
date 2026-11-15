@@ -1,0 +1,46 @@
+{
+  "name": "carreira-realista-pc",
+  "productName": "Carreira Realista",
+  "version": "0.20.0",
+  "description": "Carreira Realista ATS no PC: telemetria do jogo (plugin), ícone na bandeja e o app por cima do jogo.",
+  "main": "main.cjs",
+  "private": true,
+  "author": "altairjr",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis --publish never"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "io.github.altairjr.carreirarealista",
+    "productName": "Carreira Realista",
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "preload-overlay.cjs",
+      "painel/**",
+      "icons/**",
+      "lib/**"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/carreira-telemetria.dll",
+        "to": "carreira-telemetria.dll"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "icons/app.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "runAfterFinish": true,
+      "shortcutName": "Carreira Realista",
+      "artifactName": "CarreiraRealista-Setup.${ext}"
+    }
+  }
+}
