@@ -10,13 +10,18 @@ export function parseCreated(text) {
 }
 const rel = s => { const m = s.match(/^(\d+):(\d+):(\d+)\.(\d+)/); return m ? ((+m[1] * 60 + +m[2]) * 60 + +m[3]) * 1000 + +m[4] : null; };
 
+// "g_set_time 09 00" e "g_set_time 9 0" são o mesmo comando
+export const normCommand = c => String(c).trim().split(/\s+/).map(x => (/^-?\d+(\.\d+)?$/.test(x) ? String(Number(x)) : x.toLowerCase())).join(' ');
+
 export function parseGameLog(text) {
   const created = parseCreated(text);
-  const out = { created, profiles: [], gameVersion: null, pluginLoaded: false, pluginActive: false, pluginError: null, otherPlugins: [] };
+  const out = { created, commands: [], profiles: [], gameVersion: null, pluginLoaded: false, pluginActive: false, pluginError: null, otherPlugins: [] };
   for (const line of String(text).split(/\r?\n/)) {
     const ms = rel(line);
     const at = created && ms !== null ? new Date(created.getTime() + ms) : null;
     let m;
+    // comandos que o console do jogo executou (o jogo repete cada um no log): confirma o que o plugin digitou
+    if ((m = line.match(/^\d+:\d+:\d+\.\d+ : ((?:warp|g_set_time)\b.*)$/))) { out.commands.push({ at, text: normCommand(m[1]) }); continue; }
     if ((m = line.match(/New profile selected:\s*'([^']*)'/))) out.profiles.push({ at, name: m[1] });
     else if ((m = line.match(/loading '([^']+)' '([^']+)'/))) { if (m[1] === 'carreira-telemetria') out.pluginLoaded = true; else out.otherPlugins.push(m[1]); }
     else if (line.includes('[carreira-telemetria] ativo')) out.pluginActive = true;

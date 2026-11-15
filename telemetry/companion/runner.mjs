@@ -9,7 +9,7 @@ import { readFileSync, writeFileSync, existsSync, statSync, openSync, readSync, 
 import { join, dirname } from 'node:path';
 import { renameSync } from 'node:fs';
 import { createState, apply } from './core.mjs';
-import { parseGameLog, profileAt, currentProfile } from './gamelog.mjs';
+import { parseGameLog, profileAt, currentProfile, normCommand } from './gamelog.mjs';
 
 export const PAUSE_FLAG = 'pausado.flag';   // com este arquivo na pasta, o plugin não grava nada
 const HEARTBEAT_MS = 60e3;
@@ -51,7 +51,7 @@ export function createRunner(opts) {
   let lastStatusSent = null, lastBeat = 0, busy = false;
   const info = { sendError: null, lastCycle: null, lastSim: null, simWarned: null, noSimCols: false };
   const CMD = join(dir, CMD_FILE);
-  let simQueue = [], simSeq = Math.floor(now() / 1000) % 1e6, warpDone = null;
+  let verify = [], usedEcho = new Set(), simQueue = [], simSeq = Math.floor(now() / 1000) % 1e6, warpDone = null;
   const sim = () => cleanSim(control.sim);
 
   const persist = () => writeFileSync(STATE, JSON.stringify({ offset: S.offset, core: S.core, queue: S.queue, status: S.status, lastDelivery: S.lastDelivery, times: S.times }));
@@ -84,7 +84,7 @@ export function createRunner(opts) {
   /* --- leitura --- */
   function readGameLog() {
     if (!gameLogPath) return;
-    try { const m = statSync(gameLogPath).mtimeMs; if (m !== logMtime) { logMtime = m; gameLog = parseGameLog(readFileSync(gameLogPath, 'utf8')); } }
+    try { const st = statSync(gameLogPath), m = `${st.mtimeMs}:${st.size}`; if (m !== logMtime) { logMtime = m; const before = gameLog && gameLog.created && gameLog.created.getTime(); gameLog = parseGameLog(readFileSync(gameLogPath, 'utf8')); if ((gameLog.created && gameLog.created.getTime()) !== before) usedEcho.clear(); } }
     catch (e) { gameLog = null; }
   }
   function readNew() {
@@ -129,8 +129,9 @@ export function createRunner(opts) {
           if (sm.loadOn && sm.loadMinutes > 0 && recent(rec)) simQueue.push({ advance: sm.loadMinutes, why: 'load' });
         }
         if (o.type === 'cmd') {
-          info.lastSim = { at: o.cmd.at || new Date(now()).toISOString(), ok: o.cmd.ok, text: o.cmd.ok ? o.cmd.text : o.cmd.error };
-          notify({ type: 'sim', cmd: o.cmd });
+          // digitado: falta confirmar no game.log que o console do jogo executou (as teclas podem não ter chegado)
+          if (o.cmd.ok) verify.push({ cmd: o.cmd, target: typeof rec.target === 'number' ? rec.target : null, prof: prof || currentProfile(gameLog), since: Date.parse(rec.real || '') || now(), deadline: now() + 15e3 });
+          else simDone(o.cmd, false, o.cmd.error);
         }
         if (o.type === 'status') S.status = Object.assign({}, o.status, { blocked: why });
       }
@@ -140,6 +141,35 @@ export function createRunner(opts) {
   const recent = rec => !rec.real || now() - Date.parse(rec.real) < 15 * 60e3;
 
   /* --- simulação: comandos para o console do jogo --- */
+  function simDone(cmd, ok, text) {
+    info.lastSim = { at: new Date(now()).toISOString(), ok, text };
+    log(ok ? `Confirmado no jogo: ${text}.` : `Comando não aplicado no jogo: ${text}.`);
+    notify({ type: 'sim', cmd: Object.assign({}, cmd, { ok, text, error: ok ? null : text }) });
+  }
+  // O console do jogo repete no game.log cada comando executado: só então o comando conta como aplicado
+  function verifyTick() {
+    verify = verify.filter(v => {
+      let found = !gameLogPath;   // sem game.log (terminal de teste): não dá para conferir
+      if (!found && gameLog && gameLog.commands) {
+        const hits = [];
+        for (const want of v.cmd.console.map(normCommand)) {
+          const i = gameLog.commands.findIndex((c, k) => c.text === want && !usedEcho.has(k) && !hits.includes(k) && c.at && c.at.getTime() >= v.since - 5e3);
+          if (i < 0) { hits.length = 0; break; }
+          hits.push(i);
+        }
+        if (hits.length === v.cmd.console.length) { hits.forEach(k => usedEcho.add(k)); found = true; }
+      }
+      if (found) {
+        if (v.target !== null) {   // hora nova: vale para os próximos avanços e para o dia do app
+          S.core.gameTime = v.target; if (v.prof) S.times[v.prof] = v.target;
+          if (S.status && !S.status.blocked) S.status = Object.assign({}, S.status, { game_time: v.target });
+        }
+        simDone(v.cmd, true, v.cmd.text); return false;
+      }
+      if (now() > v.deadline) { simDone(v.cmd, false, `o jogo não recebeu "${v.cmd.console.join('; ')}" (o console não abriu ou as teclas não chegaram)`); return false; }
+      return true;
+    });
+  }
   // Por que agora não dá para mandar comandos ao jogo (null = pode)
   function simBlock() {
     if (!control.collect) return 'paused';
@@ -228,7 +258,7 @@ export function createRunner(opts) {
       readGameLog();
       // controle da conta antes de ler: uma pausa feita no app já vale para as entregas desta volta
       if (session) { try { await pullControl(); } catch (e) {} }
-      processLines(readNew(), o.diag); persist();
+      processLines(readNew(), o.diag); verifyTick(); persist();
       try { simTick(); } catch (e) { log('Comando do jogo não gravado: ' + e.message); }
       try { await sendAll(); if (info.sendError) log('Conexão com a conta de volta. Tudo enviado.'); info.sendError = null; }
       catch (e) {

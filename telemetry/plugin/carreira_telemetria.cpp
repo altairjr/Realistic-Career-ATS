@@ -44,7 +44,7 @@
 
 #include "scssdk_telemetry.h"
 
-#define PLUGIN_VERSION "0.3.1"
+#define PLUGIN_VERSION "0.3.2"
 #define PLUGIN_TAG "[carreira-telemetria] "
 
 // Exporta as duas funções que o jogo procura, com o nome exato, seja qual for a ligação declarada no SDK.
@@ -225,10 +225,10 @@ int cmd_step = -1;                  // -1 parado; 0 abrir console; 1..n digitar 
 long long cmd_at = 0, next_check = 0, ready_since = 0;
 std::vector<std::string> cmd_console;
 std::string cmd_id = "0";
-unsigned console_scancode = 0x29;
+unsigned console_scancode = 0x29;   // tecla abaixo do Esc (` no teclado americano, ' no ABNT2)
 long long init_ms = 0;              // quando o plugin foi carregado (o jogo carrega o perfil logo antes)
-bool cmd_sets_time = false;         // o comando muda a hora: no fim, a hora calculada vale até o jogo informar a real
-scs_u32_t cmd_final_time = 0;   // tecla abaixo do Esc (` no teclado americano, ' no ABNT2)
+bool cmd_sets_time = false;         // o comando muda a hora: o resultado leva a hora pretendida (target)
+scs_u32_t cmd_final_time = 0;
 
 bool game_has_focus() {
 #if defined(_WIN32)
@@ -258,29 +258,55 @@ unsigned scan_of(char c, bool &shift) {
 	if (const char *p = std::strchr(rz, c)) return 0x2C + static_cast<unsigned>(p - rz);
 	return 0;
 }
+/* Fila de teclas: uma tecla por quadro, com intervalo. O jogo lê o teclado a cada quadro; apertar e soltar no
+   mesmo instante (tudo de uma vez) faz o console perder as letras. Cada passo: tecla descendo ou subindo + espera. */
+struct KeyStep { unsigned sc; bool up; int wait_ms; std::string mark; };
+std::vector<KeyStep> keys;
+size_t key_pos = 0;
+bool shift_down = false; unsigned held = 0;
+const int KEY_MS = 35;
+void add_key(unsigned sc, int wait_after = KEY_MS) {
 #if defined(_WIN32)
-void key_scan(unsigned sc, bool up) {
-	INPUT in{}; in.type = INPUT_KEYBOARD; in.ki.wScan = static_cast<WORD>(sc); in.ki.dwFlags = KEYEVENTF_SCANCODE | (up ? KEYEVENTF_KEYUP : 0);
+	keys.push_back({ sc, false, KEY_MS, "" }); keys.push_back({ sc, true, wait_after, "" });
+#else
+	(void)sc; (void)wait_after;
+#endif
+}
+// fora do Windows (testes) só fica registrado o que seria digitado, em teclado.txt
+void add_mark(const std::string &text, int wait_after) {
+#if defined(_WIN32)
+	(void)text; (void)wait_after;
+#else
+	keys.push_back({ 0, false, wait_after, text });
+#endif
+}
+void queue_console(int wait_after) { add_key(console_scancode, wait_after); add_mark("<console>", wait_after); }
+void queue_line(const std::string &text) {
+#if defined(_WIN32)
+	for (char c : text) {
+		bool sh; const unsigned sc = scan_of(c, sh); if (!sc) continue;
+		if (sh) keys.push_back({ 0x2A, false, KEY_MS, "" });
+		keys.push_back({ sc, false, KEY_MS, "" }); keys.push_back({ sc, true, KEY_MS, "" });
+		if (sh) keys.push_back({ 0x2A, true, KEY_MS, "" });
+	}
+#endif
+	add_key(0x1C, 300);   // Enter
+	add_mark(text, 250);
+}
+void send_step(const KeyStep &k) {
+#if defined(_WIN32)
+	INPUT in{}; in.type = INPUT_KEYBOARD; in.ki.wScan = static_cast<WORD>(k.sc); in.ki.dwFlags = KEYEVENTF_SCANCODE | (k.up ? KEYEVENTF_KEYUP : 0);
 	SendInput(1, &in, sizeof in);
-}
-void press(unsigned sc, bool shift = false) { if (shift) key_scan(0x2A, false); key_scan(sc, false); key_scan(sc, true); if (shift) key_scan(0x2A, true); }
+	if (k.sc == 0x2A) shift_down = !k.up; else held = k.up ? 0 : k.sc;
 #else
-// fora do Windows (testes): registra as teclas num arquivo em vez de apertá-las
-void typed(const std::string &s) { FILE *f = std::fopen((out_dir + "/teclado.txt").c_str(), "ab"); if (f) { std::fputs(s.c_str(), f); std::fputc('\n', f); std::fclose(f); } }
-#endif
-void press_console() {
-#if defined(_WIN32)
-	press(console_scancode);
-#else
-	typed("<console>");
+	FILE *f = std::fopen((out_dir + "/teclado.txt").c_str(), "ab"); if (f) { std::fputs(k.mark.c_str(), f); std::fputc('\n', f); std::fclose(f); }
 #endif
 }
-void type_line(const std::string &text) {
+// solta o que ficou apertado se o comando parar no meio
+void release_keys() {
 #if defined(_WIN32)
-	for (char c : text) { bool sh; const unsigned sc = scan_of(c, sh); if (sc) press(sc, sh); }
-	press(0x1C);   // Enter
-#else
-	typed(text);
+	if (held) { send_step({ held, true, 0, "" }); }
+	if (shift_down) { send_step({ 0x2A, true, 0, "" }); }
 #endif
 }
 
@@ -288,7 +314,7 @@ void write_cmd_result(bool ok, const char *error) {
 	std::string list = "[";
 	for (size_t i = 0; i < cmd_console.size(); ++i) list += (i ? "," : "") + esc(cmd_console[i].c_str());
 	write_line("{\"t\":\"cmd\",\"id\":" + esc(cmd_id.c_str()) + ",\"ok\":" + (ok ? "true" : "false") + ",\"console\":" + list + "]" +
-		(error ? ",\"error\":" + esc(error) : std::string()) + context_json() + "}");
+		(error ? ",\"error\":" + esc(error) : std::string()) + (ok && cmd_sets_time ? ",\"target\":" + std::to_string(cmd_final_time) : std::string()) + context_json() + "}");
 }
 
 // Lê comando.txt e traduz para comandos do console. Retorna mensagem de erro ou nullptr.
@@ -308,7 +334,8 @@ const char *load_commands() {
 		if (op == "id") in >> cmd_id;
 		// hora do jogo conhecida pelo programa do PC (última que o jogo informou neste perfil): usada se o jogo
 		// ainda não informou a hora nesta sessão, como no menu do Esc logo depois de carregar o perfil
-		else if (op == "base") { unsigned long b = 0; if (!known && in >> b) { t = static_cast<scs_u32_t>(b); known = true; } }
+		// (o programa do PC sabe a hora mais recente: a do jogo e a dos comandos confirmados; com o jogo pausado o plugin fica sem ela)
+		else if (op == "base") { unsigned long b = 0; if (in >> b) { t = static_cast<scs_u32_t>(b); known = true; } }
 		else if (op == "tecla") { unsigned sc = 0; if (in >> sc && sc > 0 && sc < 0x80) console_scancode = sc; }
 		else if (op == "warp") {
 			double w = 0; if (!(in >> w) || !(w >= 0.1 && w <= 10.0)) return "valor de warp inválido";
@@ -348,15 +375,15 @@ SCSAPI_VOID on_frame_end(const scs_event_t, const void *const, const scs_context
 		const char *err = load_commands();
 		if (err && *err) { write_cmd_result(false, err); return; }
 		if (err || cmd_console.empty()) return;
+		keys.clear(); key_pos = 0;
+		queue_console(400);                                 // abre o console e espera ele aparecer
+		for (const std::string &c : cmd_console) queue_line(c);
+		queue_console(0);                                   // fecha
 		cmd_step = 0; cmd_at = t;
 	}
 	if (t < cmd_at) return;
-	if (!game_has_focus()) { write_cmd_result(false, "o jogo perdeu o foco no meio do comando"); cmd_step = -1; ready_since = 0; return; }
-	const int n = static_cast<int>(cmd_console.size());
-	if (cmd_step == 0) { press_console(); cmd_step = 1; cmd_at = t + 350; return; }
-	if (cmd_step <= n) { type_line(cmd_console[cmd_step - 1]); ++cmd_step; cmd_at = t + 250; return; }
-	press_console();
-	if (cmd_sets_time) set_game_time(cmd_final_time);   // o jogo pausado não informa a hora nova; esta vale até ele informar
+	if (!game_has_focus()) { release_keys(); write_cmd_result(false, "o jogo perdeu o foco no meio do comando"); cmd_step = -1; ready_since = 0; return; }
+	if (key_pos < keys.size()) { const KeyStep &k = keys[key_pos++]; send_step(k); cmd_at = t + k.wait_ms; if (key_pos < keys.size()) return; }
 	write_cmd_result(true, nullptr);
 	log_msg(("comando no console: " + cmd_console.back()).c_str());
 	cmd_step = -1; ready_since = 0;
